@@ -124,9 +124,11 @@ const dict_zh = {
 
   // ---- Self-assessment instructions ----
   self_instructions_title: "如何讀懂你的等級結果",
-  self_instructions_body: "以下 20 題隨機混合排列，請依直覺勾選符合自己的描述——作答前看不到每題所屬的等級，請依題目內容本身判斷，不需要刻意湊滿某個等級。勾選後，該題旁邊會顯示所屬等級。每個等級中符合 4 條以上即達該等級；若同時在下一個更高等級也符合 2-3 條，會標註為過渡等級（例如「B2/C1」）。全部作答完成後，頁面最下方會顯示你的整體等級。",
-  self_check_count: "已勾選 {n} / 5 項",
+  self_instructions_body: "以下 20 題隨機混合排列，請針對每一題回答 Y（符合）或 N（不符合）——作答時看不到每題所屬的等級，請依題目內容本身判斷。所有題目都必須作答後才能送出。送出後，每題會顯示所屬等級，並在最下方呈現你的整體等級：每個等級中答 Y 達 4 題以上即達該等級；若同時在下一個更高等級也答 Y 達 2-3 題，會標註為過渡等級（例如「B2/C1」）。",
+  self_check_count: "已作答 {n} / {total} 題",
   self_result_label: "你的等級",
+  self_result_none: "尚未達到任何等級的判定門檻，建議先加強一般英文基礎能力。",
+  self_retry: "重新作答",
   self_result_transition: "過渡等級：你已穩定達到 {lower}，並開始展現 {upper} 的部分能力",
 
   // ---- AI section ----
@@ -390,9 +392,11 @@ const dict_en = {
   hero_desc: "This assessment framework borrows CEFR level concepts, designed for business school EMI courses. It covers five competency areas — Listening, Reading, Pitching, Discussion, and Writing — offering both teacher assessment and student self-assessment versions.",
 
   self_instructions_title: "How to Read Your Level Result",
-  self_instructions_body: "The 20 descriptors below are shuffled randomly. Check any that match how you see yourself — the level for each item is hidden until you check it, so judge based on the statement itself rather than trying to fill out a particular level. Once checked, the item's level will appear beside it. Meeting 4 or more descriptors within a level indicates that level; meeting 2-3 at the next higher level marks a transitional result (e.g. \"B2/C1\"). Your overall level appears at the bottom once you're done.",
-  self_check_count: "{n} / 5 selected",
+  self_instructions_body: "The 20 descriptors below are shuffled randomly. Answer Y (yes) or N (no) for each one — the level for each item is hidden while you answer, so judge based on the statement itself. All 20 items must be answered before you can submit. After submitting, each item's level will be revealed, along with your overall level at the bottom: meeting 4 or more \"Y\" answers within a level indicates that level; meeting 2-3 \"Y\" answers at the next higher level marks a transitional result (e.g. \"B2/C1\").",
+  self_check_count: "{n} / {total} answered",
   self_result_label: "Your Level",
+  self_result_none: "You haven't met the threshold for any level yet. Consider strengthening your general English foundation first.",
+  self_retry: "Retake Assessment",
   self_result_transition: "Transitional level: stable at {lower}, with emerging {upper} characteristics",
 
   ai_section_title: "AI Usage Transparency Principles",
@@ -700,53 +704,8 @@ const TeacherLevelCard = ({ levelKey, label, tag, text, isLowest, note }) => {
 };
 
 // ============================================================
-// SELF-ASSESSMENT CARD (5-select-4 logic)
-// ============================================================
-const SelfLevelCard = ({ levelKey, label, tag, items, checkedSet, onToggle, t, isLowest, note }) => {
-  const c = LEVEL_COLORS[levelKey];
-  const checkedCount = items.filter((_, i) => checkedSet.has(`${levelKey}-${i}`)).length;
-  const achieved = checkedCount >= 4;
-  return (
-    <div className={`bg-white dark:bg-slate-800 rounded-xl border-2 overflow-hidden transition-all animate-fade-in ${achieved ? c.border : 'border-slate-200 dark:border-slate-700'}`}>
-      <div className={`h-1.5 ${c.bar}`}></div>
-      <div className="p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold uppercase tracking-widest ${c.text}`}>{tag}</span>
-            <span className={`text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 ${c.text}`}>{label}</span>
-          </div>
-          {achieved && (
-            <span className={`flex items-center gap-1 text-xs font-bold ${c.text}`}>
-              <IconCheck size={14}/> {t.self_check_count.replace('{n}', checkedCount)}
-            </span>
-          )}
-        </div>
-        {!achieved && <p className="text-xs text-slate-400 mb-3">{t.self_check_count.replace('{n}', checkedCount)}</p>}
-        <div className="space-y-2">
-          {items.map((item, i) => {
-            const key = `${levelKey}-${i}`;
-            const checked = checkedSet.has(key);
-            return (
-              <label key={i} className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors text-sm leading-relaxed ${checked ? 'bg-slate-50 dark:bg-slate-700/50' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
-                <input type="checkbox" checked={checked} onChange={() => onToggle(key)}
-                  className="mt-0.5 w-4 h-4 rounded shrink-0 accent-[#004030] dark:accent-[#D8C3A5]" />
-                <span className={checked ? 'text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400'}>{item}</span>
-              </label>
-            );
-          })}
-        </div>
-        {isLowest && note && (
-          <div className="mt-4 pt-4 border-t border-dashed border-slate-300 dark:border-slate-600">
-            <p className="text-xs italic text-amber-700 dark:text-amber-400">{note}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ============================================================
-// MIXED SELF-ASSESSMENT (20 shuffled items, level revealed on check)
+// MIXED SELF-ASSESSMENT (20 shuffled items, Y/N forced choice,
+// levels revealed only after Submit)
 // ============================================================
 // Deterministic shuffle seeded by construct name so order is stable across renders
 // but differs per construct (avoids every construct showing items in level order).
@@ -765,7 +724,7 @@ function seededShuffle(arr, seedStr) {
   return out;
 }
 
-const MixedSelfAssessment = ({ construct, constructData, checkedSet, onToggle, t }) => {
+const MixedSelfAssessment = ({ construct, constructData, answers, onAnswer, t, isSubmitted, onSubmit, onReset }) => {
   const items = React.useMemo(() => {
     let flat = [];
     LEVELS.forEach(lvl => {
@@ -776,28 +735,73 @@ const MixedSelfAssessment = ({ construct, constructData, checkedSet, onToggle, t
     return seededShuffle(flat, construct);
   }, [construct, constructData]);
 
+  const answeredCount = items.filter(item => answers.get(item.key) !== undefined).length;
+  const allAnswered = answeredCount === items.length;
+
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 sm:p-6 animate-fade-in">
-      <div className="space-y-2">
-        {items.map((item) => {
-          const checked = checkedSet.has(item.key);
-          const c = LEVEL_COLORS[item.levelKey];
-          return (
-            <label key={item.key} className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors text-sm leading-relaxed ${checked ? 'bg-slate-50 dark:bg-slate-700/50' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
-              <input type="checkbox" checked={checked} onChange={() => onToggle(item.key)}
-                className="mt-0.5 w-4 h-4 rounded shrink-0 accent-[#004030] dark:accent-[#D8C3A5]" />
-              <span className="flex-1 flex items-center justify-between gap-3">
-                <span className={checked ? 'text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400'}>{item.text}</span>
-                {checked && (
-                  <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 ${c.text} animate-fade-in`}>
-                    {t[`level_${item.levelKey}_tag`]}
-                  </span>
-                )}
-              </span>
-            </label>
-          );
-        })}
+    <div>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 sm:p-6 animate-fade-in">
+        {!isSubmitted && (
+          <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-100 dark:border-slate-700">
+            <span className="text-xs font-bold text-slate-400">{t.self_check_count.replace('{n}', answeredCount).replace('{total}', items.length)}</span>
+          </div>
+        )}
+        <div className="space-y-2">
+          {items.map((item) => {
+            const ans = answers.get(item.key);
+            const c = LEVEL_COLORS[item.levelKey];
+            return (
+              <div key={item.key} className={`flex items-center gap-3 p-3 rounded-lg transition-colors text-sm leading-relaxed ${ans !== undefined ? 'bg-slate-50 dark:bg-slate-700/50' : ''}`}>
+                <span className="flex-1 text-slate-700 dark:text-slate-300">{item.text}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {!isSubmitted ? (
+                    <>
+                      <button onClick={() => onAnswer(item.key, 'Y')}
+                        className={`w-9 h-9 rounded-lg text-xs font-bold border-2 transition ${ans === 'Y' ? 'bg-[#004030] dark:bg-[#D8C3A5] border-[#004030] dark:border-[#D8C3A5] text-white dark:text-[#004030]' : 'border-slate-300 dark:border-slate-600 text-slate-400 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
+                        Y
+                      </button>
+                      <button onClick={() => onAnswer(item.key, 'N')}
+                        className={`w-9 h-9 rounded-lg text-xs font-bold border-2 transition ${ans === 'N' ? 'bg-slate-500 border-slate-500 text-white' : 'border-slate-300 dark:border-slate-600 text-slate-400 hover:border-slate-500'}`}>
+                        N
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`text-xs font-bold ${ans === 'Y' ? 'text-[#004030] dark:text-[#D8C3A5]' : 'text-slate-400'}`}>{ans}</span>
+                      {ans === 'Y' && (
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 ${c.text}`}>
+                          {t[`level_${item.levelKey}_tag`]}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {!isSubmitted && (
+          <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+            <button onClick={onSubmit} disabled={!allAnswered}
+              className={`px-6 py-2.5 text-sm font-bold rounded-lg transition ${allAnswered ? 'bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] hover:opacity-90' : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'}`}>
+              {t.submit}
+            </button>
+          </div>
+        )}
       </div>
+
+      {isSubmitted && (
+        <>
+          <SelfResultBanner answers={answers} t={t} />
+          <div className="flex justify-center mt-4">
+            <button onClick={onReset}
+              className="px-5 py-2 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-[#004030] dark:hover:border-[#D8C3A5] hover:text-[#004030] dark:hover:text-[#D8C3A5] transition">
+              {t.self_retry}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -805,12 +809,18 @@ const MixedSelfAssessment = ({ construct, constructData, checkedSet, onToggle, t
 // ============================================================
 // SELF-ASSESSMENT RESULT BANNER
 // ============================================================
-const SelfResultBanner = ({ checkedSet, t }) => {
-  const achievedLevels = LEVELS.filter(lvl => {
-    const count = [0,1,2,3,4].filter(i => checkedSet.has(`${lvl}-${i}`)).length;
-    return count >= 4;
-  });
-  if (achievedLevels.length === 0) return null;
+const SelfResultBanner = ({ answers, t }) => {
+  const countY = (lvl) => [0,1,2,3,4].filter(i => answers.get(`${lvl}-${i}`) === 'Y').length;
+  const achievedLevels = LEVELS.filter(lvl => countY(lvl) >= 4);
+
+  if (achievedLevels.length === 0) {
+    return (
+      <div className="rounded-xl border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-5 mt-6 text-center animate-fade-in">
+        <p className="text-xs uppercase tracking-widest text-slate-400 mb-1">{t.self_result_label}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">{t.self_result_none}</p>
+      </div>
+    );
+  }
 
   // Highest fully-achieved level = lowest index in LEVELS order (since LEVELS is highest-to-lowest)
   const highestIdx = Math.min(...achievedLevels.map(l => LEVELS.indexOf(l)));
@@ -820,7 +830,7 @@ const SelfResultBanner = ({ checkedSet, t }) => {
   let transitionLabel = null;
   if (highestIdx > 0) {
     const upperLevel = LEVELS[highestIdx - 1];
-    const upperCount = [0,1,2,3,4].filter(i => checkedSet.has(`${upperLevel}-${i}`)).length;
+    const upperCount = countY(upperLevel);
     if (upperCount >= 2 && upperCount <= 3) {
       transitionLabel = { lower: t[`level_${highestLevel}_tag`], upper: t[`level_${upperLevel}_tag`] };
     }
@@ -828,7 +838,7 @@ const SelfResultBanner = ({ checkedSet, t }) => {
 
   const c = LEVEL_COLORS[highestLevel];
   return (
-    <div className={`rounded-xl border-2 ${c.border} bg-white dark:bg-slate-800 p-5 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in`}>
+    <div className={`rounded-xl border-2 ${c.border} bg-white dark:bg-slate-800 p-5 mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in`}>
       <div>
         <p className="text-xs uppercase tracking-widest text-slate-400 mb-1">{t.self_result_label}</p>
         <p className={`text-2xl font-serif font-black ${c.text}`}>
@@ -932,7 +942,8 @@ const SelfInstructions = ({ t }) => (
 // MAIN APP
 // ============================================================
 function App() {
-  const LS_SELF = 'EMI_RUBRICS_self_assessment';
+  const LS_SELF = 'EMI_RUBRICS_self_assessment_answers';
+  const LS_SUBMITTED = 'EMI_RUBRICS_self_assessment_submitted';
   const LS_AI = 'EMI_RUBRICS_ai_disclosure';
   const loadLS = (key, fb) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fb; } catch { return fb; } };
 
@@ -942,13 +953,17 @@ function App() {
   const [construct, setConstruct] = useState('listening');
   const [menuOpen, setMenuOpen] = useState(false);
   const [ttsState, setTtsState] = useState('idle');
-  const [checkedSet, setCheckedSet] = useState(() => new Set(loadLS(LS_SELF, [])));
+  // answers: { "construct:levelKey-idx": "Y" | "N" }
+  const [answers, setAnswers] = useState(() => loadLS(LS_SELF, {}));
+  // submitted: { construct: true }
+  const [submitted, setSubmitted] = useState(() => loadLS(LS_SUBMITTED, {}));
   const [aiDisclosure, setAiDisclosure] = useState(() => loadLS(LS_AI, { used: false, purpose: '', revision: '' }));
   const menuRef = useRef(null);
   const t = dict[lang];
 
   useEffect(() => { document.documentElement.classList.toggle('dark', isDark); }, [isDark]);
-  useEffect(() => { try { localStorage.setItem(LS_SELF, JSON.stringify([...checkedSet])); } catch {} }, [checkedSet]);
+  useEffect(() => { try { localStorage.setItem(LS_SELF, JSON.stringify(answers)); } catch {} }, [answers]);
+  useEffect(() => { try { localStorage.setItem(LS_SUBMITTED, JSON.stringify(submitted)); } catch {} }, [submitted]);
   useEffect(() => { try { localStorage.setItem(LS_AI, JSON.stringify(aiDisclosure)); } catch {} }, [aiDisclosure]);
 
   useEffect(() => {
@@ -957,24 +972,28 @@ function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Reset checked set per-construct-per-level keys are global; clearing on construct switch
-  // is intentionally NOT done — each construct's keys are independent since levelKey is shared
-  // across constructs. We namespace by construct to avoid collision:
-  const toggleCheck = (key) => {
+  const setAnswer = (key, value) => {
     const fullKey = `${construct}:${key}`;
-    setCheckedSet(prev => {
-      const next = new Set(prev);
-      if (next.has(fullKey)) next.delete(fullKey); else next.add(fullKey);
+    setAnswers(prev => ({ ...prev, [fullKey]: value }));
+  };
+  const constructAnswers = {
+    get: (key) => answers[`${construct}:${key}`]
+  };
+  const isSubmitted = !!submitted[construct];
+  const submitConstruct = () => setSubmitted(prev => ({ ...prev, [construct]: true }));
+  const resetConstruct = () => {
+    setAnswers(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(k => { if (k.startsWith(`${construct}:`)) delete next[k]; });
       return next;
     });
-  };
-  const constructCheckedSet = {
-    has: (key) => checkedSet.has(`${construct}:${key}`)
+    setSubmitted(prev => { const next = { ...prev }; delete next[construct]; return next; });
   };
 
   const toggleLanguage = () => { setLang(l => l === 'en' ? 'zh' : 'en'); stopTTS(); };
   const toggleTheme = () => setIsDark(d => !d);
   const stopTTS = () => { if ('speechSynthesis' in window) speechSynthesis.cancel(); setTtsState('idle'); };
+
 
   const handleTTS = (action) => {
     if (!('speechSynthesis' in window)) return;
@@ -1113,13 +1132,8 @@ function App() {
             <AITransparencySection t={t} />
           ) : (
             <>
-              {/* Self-assessment instructions + result */}
-              {mode === 'self' && (
-                <>
-                  <SelfInstructions t={t} />
-                  <SelfResultBanner checkedSet={constructCheckedSet} t={t} />
-                </>
-              )}
+              {/* Self-assessment instructions */}
+              {mode === 'self' && <SelfInstructions t={t} />}
 
               {/* Content */}
               {mode === 'teacher' ? (
@@ -1137,7 +1151,8 @@ function App() {
               ) : (
                 <div key={`${construct}-${mode}`}>
                   <MixedSelfAssessment construct={construct} constructData={constructData}
-                    checkedSet={constructCheckedSet} onToggle={toggleCheck} t={t} />
+                    answers={constructAnswers} onAnswer={setAnswer} t={t}
+                    isSubmitted={isSubmitted} onSubmit={submitConstruct} onReset={resetConstruct} />
                 </div>
               )}
 
