@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business EMI Assessment System v1.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-green: #004529;
+            --accent-gold: #D4AF37;
+            --bg-light: #FDFBF7;
+            --text-dark: #1A1A1A;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .theme-dark { background-color: var(--primary-green); color: #FFFFFF; }
+        .theme-light { background-color: var(--bg-light); color: var(--text-dark); }
+
+        .gold-text { color: var(--accent-gold); }
+        .gold-border { border-color: var(--accent-gold); }
+        .gold-bg { background-color: var(--accent-gold); }
+
+        .nav-header {
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+            height: 64px;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            height: 350px;
+            margin: auto;
+        }
+
+        .rubric-card {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            padding: 1.5rem;
+            height: auto;
+        }
+        
+        .theme-dark .rubric-card { background: rgba(255,255,255,0.05); }
+        .theme-light .rubric-card { background: rgba(0,0,0,0.03); }
+        
+        .rubric-card:hover { border-color: var(--accent-gold); transform: translateY(-2px); }
+
+        .dropdown-animate {
+            animation: slideDown 0.2s ease-out forwards;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        footer { height: 32px; font-size: 11px; display: flex; align-items: center; border-top: 1px solid rgba(212, 175, 55, 0.2); }
+
+        .bg-custom-section { transition: background-color 0.3s; }
+        .theme-light .bg-custom-section { background-color: #F3F1ED !important; color: var(--text-dark); }
+        .theme-dark .bg-custom-section { background-color: #00301d !important; color: #FFFFFF; }
+
+        /* Custom Alert Overlay */
+        #alert-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="theme-dark antialiased" id="main-body" oncontextmenu="return showCopyrightAlert();">
+
+    <!-- Copyright Alert Modal -->
+    <div id="alert-overlay" onclick="closeAlert()">
+        <div class="bg-white text-[#004529] p-8 rounded-sm max-w-sm text-center border-l-4 border-[#D4AF37]">
+            <h3 class="font-bold text-lg mb-2">Copyright Protection / 版權所有</h3>
+            <p class="text-sm opacity-80" id="alert-text">All content on this page is legally protected. Unauthorized copying or redistribution is strictly prohibited.</p>
+            <button class="mt-6 px-6 py-2 bg-[#004529] text-white text-xs font-bold rounded-sm">CLOSE / 關閉</button>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 nav-header px-4 md:px-8 bg-inherit flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <button onclick="toggleNav()" class="p-2 hover:bg-white/10 rounded-sm transition">
+                <div class="w-5 h-0.5 gold-bg mb-1"></div>
+                <div class="w-5 h-0.5 gold-bg mb-1"></div>
+                <div class="w-3 h-0.5 gold-bg"></div>
+            </button>
+            <div onclick="resetToHome()" class="flex items-center cursor-pointer group">
+                <div class="bg-white text-[#004529] font-black px-2 py-0.5 rounded-sm mr-2 text-sm">EMI</div>
+                <span class="font-bold tracking-tight text-lg hidden sm:inline gold-text group-hover:opacity-80">EMI Rubrics</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <!-- Voice Controls -->
+            <div class="flex items-center bg-black/20 rounded-full px-3 py-1 space-x-3 border border-gold-500/30">
+                <button id="play-pause-btn" onclick="toggleSpeech()" class="text-xs gold-text hover:scale-110 transition" title="Play/Pause">▶</button>
+                <button onclick="stopSpeech()" class="text-xs gold-text hover:scale-110 transition" title="Stop">■</button>
+            </div>
+            <button onclick="toggleLanguage()" class="text-[11px] font-bold px-2 py-1 border gold-border gold-text rounded-sm hover:bg-gold-500/10" id="lang-btn">中文</button>
+            <button onclick="toggleTheme()" class="p-2 text-sm gold-text" id="theme-btn">🌙</button>
+        </div>
+
+        <!-- Dropdown Menu -->
+        <div id="nav-dropdown" class="hidden absolute top-16 left-0 w-64 bg-inherit shadow-2xl border-r gold-border dropdown-animate z-50">
+            <ul class="py-2 font-semibold text-sm">
+                <li class="px-6 py-4 hover:bg-gold-500/10 cursor-pointer border-l-4 border-transparent hover:border-[#D4AF37]" onclick="scrollToSection('hero')">HOME / 首頁</li>
+                <li class="px-6 py-4 hover:bg-gold-500/10 cursor-pointer border-l-4 border-transparent hover:border-[#D4AF37]" onclick="scrollToSection('analysis')">STRATEGY / 策略分析</li>
+                <li class="px-6 py-4 hover:bg-gold-500/10 cursor-pointer border-l-4 border-transparent hover:border-[#D4AF37]" onclick="scrollToSection('rubrics')">RUBRICS / 專業矩陣</li>
+                <li class="px-6 py-4 hover:bg-gold-500/10 cursor-pointer border-l-4 border-transparent hover:border-[#D4AF37]" onclick="scrollToSection('guidelines')">KSF / 成功關鍵</li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <header id="hero" class="relative min-h-screen flex items-center pt-16 px-6">
+        <div class="max-w-6xl mx-auto w-full grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+                <p class="gold-text font-bold tracking-[0.2em] uppercase text-xs mb-4" id="hero-subtitle">EXECUTIVE COMMUNICATION</p>
+                <h1 class="text-5xl md:text-6xl font-bold leading-tight mb-8" id="hero-title">Professional <br><span class="gold-text">EMI Mastery</span></h1>
+                <p class="text-lg opacity-75 mb-10 leading-relaxed max-w-xl" id="hero-desc">Assessment framework for business disciplines, focusing on translating data into impactful insights. Referencing CEFR 2020 for high-stakes professional environments.</p>
+                <div class="flex space-x-4">
+                    <button onclick="scrollWithoutNav('rubrics')" class="gold-bg text-white px-8 py-3 font-bold rounded-sm text-sm" id="btn-primary">EXPLORE RUBRICS</button>
+                    <a href="https://rm.coe.int/common-european-framework-of-reference-for-languages-learning-teaching/16809ea0d4" target="_blank" class="border gold-border gold-text px-8 py-3 font-bold rounded-sm text-sm hover:bg-gold-500/10" id="btn-secondary">CEFR 2020 REF</a>
+                </div>
+            </div>
+            <div class="hidden lg:block">
+                <div class="bg-white/5 backdrop-blur-md p-8 border border-white/10 rounded-sm">
+                    <div class="chart-container">
+                        <canvas id="heroRadar"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Strategy -->
+    <section id="analysis" class="py-24 px-6 bg-white/5">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-3 gap-16">
+                <div class="col-span-1">
+                    <h2 class="text-3xl font-bold mb-6 gold-text" id="s1-title">Strategic Gap</h2>
+                    <p class="opacity-70 text-sm leading-loose mb-8" id="s1-p1">While general English focuses on social fluency, EMI in business demands cognitive synthesis of professional domains. We prioritize logic and decision-making impact.</p>
+                    <hr class="gold-border border-t-2 w-12">
+                </div>
+                <div class="col-span-2 grid sm:grid-cols-2 gap-8">
+                    <div class="p-8 border border-gold-500/20 rounded-sm">
+                        <h4 class="font-bold mb-4 gold-text" id="s1-f1-t">Case Synthesis</h4>
+                        <p class="text-sm opacity-70" id="s1-f1-d">Going beyond textual understanding; it requires deconstructing market contradictions and rebuilding solutions with rigorous professional logic and precision.</p>
+                    </div>
+                    <div class="p-8 border border-gold-500/20 rounded-sm">
+                        <h4 class="font-bold mb-4 gold-text" id="s1-f2-t">Executive Logic</h4>
+                        <p class="text-sm opacity-70" id="s1-f2-d">The primary goal is communicative effectiveness. In high-pressure environments, using robust analytical structures to defend a position is the ultimate professional value.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Rubrics -->
+    <section id="rubrics" class="py-24 px-6 max-w-7xl mx-auto">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl font-bold mb-4 gold-text" id="s2-title">Assessment Matrix</h2>
+            <p class="opacity-70 text-sm" id="s2-desc">Select core metrics to view detailed rubrics referencing professional disciplinary tasks and executive communication standards.</p>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-2 mb-10">
+            <button onclick="setRubric('discussion')" id="tab-discussion" class="px-6 py-2 text-xs border gold-border gold-bg text-white font-bold">Discussion</button>
+            <button onclick="setRubric('pitch')" id="tab-pitch" class="px-6 py-2 text-xs border gold-border hover:bg-gold-500/10 font-bold">Pitching</button>
+            <button onclick="setRubric('reading')" id="tab-reading" class="px-6 py-2 text-xs border gold-border hover:bg-gold-500/10 font-bold">Case Reading</button>
+            <button onclick="setRubric('writing')" id="tab-writing" class="px-6 py-2 text-xs border gold-border hover:bg-gold-500/10 font-bold">Business Writing</button>
+        </div>
+
+        <div id="rubric-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Dynamic Content -->
+        </div>
+    </section>
+
+    <!-- Success Factors (KSF) -->
+    <section id="guidelines" class="py-24 px-6 bg-custom-section">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-2xl font-bold gold-text text-center mb-16" id="s3-title">Success Factors</h2>
+            <div class="grid md:grid-cols-3 gap-12 text-center">
+                <div class="p-4">
+                    <h4 class="font-bold mb-4" id="ksf1-t">Impact Weighting</h4>
+                    <p class="text-sm opacity-75 leading-relaxed" id="ksf1-d">Assessments should shift from error correction to impact measurement. The ability to drive consensus and decisions is the hallmark of professional EMI proficiency.</p>
+                </div>
+                <div class="p-4">
+                    <h4 class="font-bold mb-4" id="ksf2-t">Corporate Feedback</h4>
+                    <p class="text-sm opacity-75 leading-relaxed" id="ksf2-d">Feedback must mirror boardroom dynamics. Guide students on professional defense against challenges and engaging in constructive debate under professional pressure.</p>
+                </div>
+                <div class="p-4">
+                    <h4 class="font-bold mb-4" id="ksf3-t">Analytical Scaffolding</h4>
+                    <p class="text-sm opacity-75 leading-relaxed" id="ksf3-d">Provide linguistic 鷹架 via professional management frameworks, enabling high-level analysis even when students face specific vocabulary constraints.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="fixed bottom-0 w-full bg-inherit px-6 z-50">
+        <div class="flex w-full justify-between items-center opacity-60">
+            <div class="flex space-x-4">
+                <span>v.1.0 | 2026/06</span>
+                <span class="cursor-pointer hover:underline gold-text" onclick="showCopyrightAlert()">© All Rights Reserved.</span>
+            </div>
+            <div class="flex items-center space-x-6">
+                <span>Architect: <a href="https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo" target="_blank" class="gold-text hover:underline">Prof. Shihmin Lo</a></span>
+                <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="gold-text font-bold uppercase">Top</button>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const i18n = {
+            'en': {
+                heroSubtitle: 'EXECUTIVE COMMUNICATION',
+                heroTitle: 'Professional <br><span class="gold-text">EMI Mastery</span>',
+                heroDesc: 'Assessment framework for business disciplines, focusing on translating data into impactful insights. Referencing CEFR 2020 for high-stakes professional environments.',
+                btnPrimary: 'EXPLORE RUBRICS', btnSecondary: 'CEFR 2020 REF',
+                s1Title: 'Strategic Gap',
+                s1P1: 'While general English focuses on social fluency, EMI in business demands cognitive synthesis of professional domains. We prioritize logic and decision-making impact.',
+                s1F1T: 'Case Synthesis', s1F1D: 'Going beyond textual understanding; it requires deconstructing market contradictions and rebuilding solutions with rigorous professional logic and precision.',
+                s1F2T: 'Executive Logic', s1F2D: 'The primary goal is communicative effectiveness. In high-pressure environments, using robust analytical structures to defend a position is the ultimate professional value.',
+                s2Title: 'Assessment Matrix', s2Desc: 'Select core metrics to view detailed rubrics referencing professional disciplinary tasks and executive communication standards.',
+                s3Title: 'Success Factors',
+                ksf1T: 'Impact Weighting', ksf1D: 'Assessments should shift from error correction to impact measurement. The ability to drive consensus and decisions is the hallmark of professional EMI proficiency.',
+                ksf2T: 'Corporate Feedback', ksf2D: 'Feedback must mirror boardroom dynamics. Guide students on professional defense against challenges and engaging in constructive debate under professional pressure.',
+                ksf3T: 'Analytical Scaffolding', ksf3D: 'Provide linguistic 鷹架 via professional management frameworks, enabling high-level analysis even when students face specific vocabulary constraints.',
+                levels: ['C2/C1 (Expert)', 'B2 (Proficient)', 'B1 (Independent)', 'A2 (Developing)'],
+                tabs: ['Discussion', 'Pitching', 'Reading', 'Writing'],
+                copyright: 'All content on this page is legally protected. Unauthorized copying or redistribution is strictly prohibited.'
+            },
+            'zh-TW': {
+                heroSubtitle: '高階商務溝通',
+                heroTitle: '商管領域 <br><span class="gold-text">EMI 專業精通</span>',
+                heroDesc: '專為商管學門設計的評量架構，著重於將數據轉化為具備影響力的洞察。參照 CEFR 2020 標準，優化高風險專業環境下的溝通品質。',
+                btnPrimary: '探索專業矩陣', btnSecondary: 'CEFR 2020 資源',
+                s1Title: '策略性斷層',
+                s1P1: '一般英語側重於社交流暢度，而商管 EMI 則要求對專業領域的認知整合。我們優先考量邏輯傳遞與決策影響力。',
+                s1F1T: '個案綜合分析', s1F1D: '超越單純的文字理解，要求學生能解構市場矛盾，並運用嚴謹的專業邏輯與精準度重建解決方案。',
+                s1F2T: '高階決策邏輯', s1F2D: '核心目標在於溝通達成率。在壓力環境中，利用強韌的分析架構來捍衛立場，是專業價值最高體現。',
+                s2Title: '互動式評量矩陣', s2Desc: '請選擇核心指標，檢視參照專業學科任務與高階溝通標準所定義的詳細尺規內容。',
+                s3Title: '教學成功關鍵',
+                ksf1T: '影響力權重', ksf1D: '評量重點應從錯誤糾正轉向影響力衡量。能凝聚共識並驅動決策的能力，才是專業 EMI 精通的指標。',
+                ksf2T: '職場導向回饋', ksf2D: '回饋必須模仿真實職場互動。指導學生如何針對專業挑戰進行應對防禦，並在專業壓力下進行建設性辯論。',
+                ksf3T: '分析性鷹架', ksf3D: '透過專業管理架構提供語言 鷹架，讓學生在面對特定字彙受限時，仍能產出具備高度深度的分析論點。',
+                levels: ['C2/C1 (專家)', 'B2 (精通)', 'B1 (獨立)', 'A2 (發展中)'],
+                tabs: ['課堂討論', '簡報提案', '個案閱讀', '商務書寫'],
+                copyright: '本網頁所有內容受法律保護。未經授權禁止複製或二次發佈。'
+            }
+        };
+
+        const rubricData = {
+            discussion: {
+                'en': [
+                    'Demonstrates absolute command of spontaneous academic debate. Can navigate complex case dynamics and identify subtle market nuances without searching for expressions. Language use is precise, employing high-level professional connectors to guide peers toward strategic conclusions. Communication is characterized by a sophisticated level of logical coherence, integrating diverse data points into a unified boardroom-ready perspective. Mistakes are virtually non-existent or do not detract from the professional manager image.',
+                    'Can engage actively in professional discussions with consistent logical flow. Effectively handles challenging follow-up questions from professors or peers, providing evidence-based defenses for strategic positions. While occasional pauses for specialized terminology may occur during high-intensity debates, fluency remains high. Shows good control of complex sentence structures and can self-correct effectively without disrupting the communicative intent or the timing of the boardroom simulation.',
+                    'Participates in discussions using a solid repertoire of business vocabulary. Can express core arguments and explain routine processes clearly. However, may show limitations when the debate shifts into highly abstract or non-linear territories, relying more on prepared notes or familiar logical patterns. Communication is effective for familiar case topics but lacks the linguistic flexibility to lead high-stakes negotiations or complex strategic synthesis without significant preparation.',
+                    'Communicates limited information using repetitive sentence patterns and basic business formulae. Frequent pauses for lexical planning and grammatical repair significantly hinder the flow of logic, making it difficult for peers to follow complex chains of reasoning. While they can satisfy basic informational needs in a classroom setting, they cannot yet independently drive a sophisticated case discussion or engage in deep critical debate without extensive external support.'
+                ],
+                'zh-TW': [
+                    '展現對即興學術辯論的絕對掌控力。能流暢地應對複雜個案動態並識別微妙的市場細節，無需費力尋找措辭。語言運用精準，能使用高階專業連接詞引導同儕達成策略結論。溝通具備高度邏輯一致性，能將多元數據整合為一致的決策者觀點。語法瑕疵幾乎不存在，或完全不影響其展現出的專業經理人形象。',
+                    '能以連貫的邏輯流程積極參與專業討論。能有效應對教授或同儕的挑戰性追問，為策略立場提供基於證據的辯護。儘管在激烈辯論中偶爾需思考特定術語，但整體流暢度維持高標。對複雜句型展現良好的控制力，且具備優秀的自我修正能力，確保溝通意圖與討論節奏不會因語法瑕疵受挫。',
+                    '使用紮實的商務詞彙參與討論。能清晰表達核心論點並解釋常規流程。然而，當討論轉向高度抽象或非線性領域時，會表現出局限性，較依賴預擬筆記或熟悉的邏輯模式。在熟悉個案主題上的溝通尚屬有效，但缺乏在無顯著準備下領導高風險談判或複雜策略綜合分析所需的語言靈活度。',
+                    '使用重覆句型與基礎商業套句傳遞有限資訊。頻繁的詞彙搜尋與語法修復動作嚴重阻礙了邏輯傳遞流暢度，使聽眾難以跟上複雜的推論鏈。雖然能滿足基礎課堂資訊交換需求，但尚無法獨立驅動具備深度管理思維的個案討論，或在缺乏大量外部協助下參與深層的批判性辯論。'
+                ]
+            },
+            pitch: {
+                'en': [
+                    'Delivers highly persuasive, manager-level pitches that command authority. Expertly integrates complex data visualizations with verbal narrative to drive decisive business actions. Q&A handling is flawless, demonstrating an ability to pivot and address hostile or unexpected questions with precision and professional grace. Mastery over organizational patterns creates a compelling, seamless narrative that aligns with corporate goals. The impact is indistinguishable from a top-tier global strategy consultant.',
+                    'Presents clear, detailed business proposals with consistent logical flow. Effectively uses professional connectors to link strategic sub-themes with empirical evidence. Can address most audience inquiries during Q&A sessions with confidence, though syntax may simplify under extreme pressure. Maintains strong audience engagement through controlled delivery and confident intonation. Accuracy is high, and the student can explain strategic viewpoints by weighing advantages and disadvantages with professional clarity.',
+                    'Can present standard business reports with structured, linear logic. Relies on visual aids and scripts to maintain the narrative; interaction with the audience is structured but limited in depth. Handles basic Q&A using simple, correct phrases but may struggle to clarify complex technical points if challenged directly. The presentation is coherent but lacks the persuasive rhetorical "spark" and linguistic flexibility required for high-level competitive pitching or stakeholder buy-in.',
+                    'Presentation structure is fragmented and often difficult to follow. Language barriers frequently cause the audience to lose track of the core value proposition. Severe pauses for word-searching and grammatical repair disrupt the flow and undermine professional credibility. Struggles significantly with impromptu questions, requiring simplified phrasing or translation assistance to bridge the communication gap. While basic facts can be delivered, independent construction of a cohesive strategic argument is not yet possible.'
+                ],
+                'zh-TW': [
+                    '發表具備高度說服力與權威感的經理人級提案。能將複雜數據視覺化與口頭敘事完美結合，驅動聽眾進行決策。Q&A 應對無懈可擊，展現出在精準與優雅間應對敵意或突發提問的應變能力。對組織模式的掌控創造了具備吸引力且無縫的敘事，並與企業目標高度一致。其專業衝擊力與頂尖全球策略顧問無異。',
+                    '發表結構清晰、細節詳盡且邏輯連貫的商業提案。能有效運用專業連接詞將策略子議題與實證數據連結。在 Q&A 環節能自信應對大多數詢問，儘管在極端壓力下句法可能趨於簡化。透過紮實的節奏與自信的語調維持聽眾參與感。準確度高，能以專業的清晰度衡量不同策略選項的優劣並解釋觀點。',
+                    '能發表具備結構與線性邏輯的標準商業報告。依賴視覺輔助工具與講稿維持敘事；與聽眾互動具備結構但深度有限。能使用簡單正確的句型處理基礎 Q&A，但若直接面對技術挑戰時，難以在第一時間澄清複雜細節。簡報內容連貫，但缺乏高階競爭提案或爭取利害關係人認同所需的說服力火花與語言靈活度。',
+                    '簡報結構碎片化且難以跟隨。語言障礙頻繁導致聽眾遺失核心價值主張。嚴重的詞彙搜尋與語法修復破壞了流暢度，削弱了專業可信度。在即興問答環節表現極度吃力，需要簡化用詞或翻譯協助來彌補溝通斷層。雖然能傳遞基礎事實，但尚無法獨立建構出具備凝聚力的策略論證。'
+                ]
+            },
+            reading: {
+                'en': [
+                    'Effortlessly deciphers abstract and structurally complex business journals, financial reports, and legal frameworks. Can identify subtle nuances in tone, irony, and recognize implicit ideological stances of writers. High efficiency in extracting strategic insights from thousands of words of unstructured data, synthesizing information for manager summaries without loss of critical detail. Demonstrates complete academic autonomy in processing any form of written business communication.',
+                    'Reads long, specialized articles and technical reports in their field with high comprehension and speed. Understands contemporary business problems and can evaluate the merits of different strategic options discussed in complex texts. Can handle complex syntax in Harvard-style case studies, occasionally consulting dictionaries for rare jargon without losing the thread. Formulates independent professional opinions based on a thorough reading of technical and management documents.',
+                    'Understands factual business texts consisting mainly of high-frequency terminology and standard professional language. Can grasp main ideas of textbook chapters or industry newsletters. However, reading speed decreases significantly when facing lengthy or linguistically complex cases, and implicit meanings may be missed. Identifies specific, predictable information in everyday business material but struggles with abstract texts requiring high degrees of cultural or contextual inference.',
+                    'Limited to understanding short, simple business texts, bulleted lists, and basic messages. Struggles with the volume and structural complexity of standard business case studies. Heavily dependent on translation tools for any text exceeding a few hundred words. Fails to identify the core strategic problem or the author’s stance within a professional article without significant simplified interpretation. Inability to process complex sentences prevents independent academic study in business.'
+                ],
+                'zh-TW': [
+                    '毫不費力地解讀抽象且結構複雜的商業期刊、財務報告與法律框架。能辨識語氣中的微妙細節與諷刺，並洞察作者隱含的立場。從數千字非結構化數據中提取策略洞察極其高效，能合成為不失細節的高階經理人摘要。在處理任何形式的書面商務溝通中，均展現出完全的學術自主性。',
+                    '能高度理解並快速閱讀專業領域的長篇專文與技術報告。掌握當代商業問題並評估文本中不同策略選項的優劣。能處理哈佛式個案研究中的複雜句法，偶爾需查閱生僻術語但不影響整體脈絡。能基於對技術與管理文件的深入閱讀，形成獨立的專業見解。',
+                    '能理解以高頻術語與標準專業語言為主的商業文本。能掌握教科書章節或產業快訊的核心重點。但在面對篇幅長且語言結構複雜的個案時閱讀速度顯著下降，且容易遺漏字裡行間的隱含意義。能識別日常商務材料中特定的預期資訊，但難以應對需要高度文化推論的抽象文本。',
+                    '閱讀能力侷限於簡短、簡單的商務文本、清單與基礎訊息。在面對標準商業個案研究的篇幅與結構複雜度時表現吃力。對於超過數百字的文本高度依賴翻譯工具。若缺乏大量簡化詮釋，無法識別專業文章中的核心策略問題或作者立場。無法處理複雜句構導致無法在商務環境下進行獨立學術研究。'
+                ]
+            },
+            writing: {
+                'en': [
+                    'Writes flawless, professionally impactful business reports meeting high international standards. Tone is consistently executive, using sophisticated logical connectors to guide readers through complex arguments. Can synthesize data from multiple sources into a coherent, persuasive document with an effective logical structure that highlights salient issues. Mastery over organizational patterns allows for precise and stylish summaries of specialized works suitable for a global board-level audience.',
+                    'Can produce clear, detailed business essays, reports, and proposals on a wide range of subjects. Effectively supports viewpoints with structured evidence and reasons. Accuracy is consistently high, and errors are rare. The style is appropriate for a professional environment, showing a solid command of formal business syntax and logical sequencing. Selects a style appropriate to the target reader and can underline the significance of various events or strategic choices with professional depth.',
+                    'Writes simple, connected business reports on familiar topics. Can describe processes and basic goals but struggles with complex sub-themes or abstract justifications. Direct translation from the native language is often evident in sentence structures. While clear for routine internal communication, the writing lacks the professional polish and stylistic nuance required for external stakeholder engagement or formal policy recommendations.',
+                    'Written output is limited to short, fragmented messages or basic summaries. Severe grammatical errors and inappropriate word choices frequently obstruct the transmission of management concepts. Struggles significantly to organize information into a logical linear sequence, resulting in a disjointed narrative. Cannot independently draft a professional report or persuasive proposal without extensive editing and external help. Professional written communication remains a major barrier.'
+                ],
+                'zh-TW': [
+                    '撰寫出無瑕且具專業衝擊力、符合高國際標準的商業報告。語氣始終維持在經理人層級，運用精密的邏輯連接詞引導讀者理解複雜論證。能將多元來源數據合成為具說服力的文件，並以有效的邏輯結構突出關鍵議題。對組織模式的掌控使其能精準且具備風格地撰寫摘要，適合全球高階決策受眾。',
+                    '能產出清晰、細節詳盡且主題廣泛的商業論文、報告與提案。能有效運用結構化證據與理由支持觀點。準確度持續維持高標，錯誤極少。風格非常適合專業職場，展現對正式商務句法與邏輯序列的紮實掌握。能根據受眾選擇適當寫作風格，並能以專業深度強調各種事件或策略選擇的重要性。',
+                    '針對熟悉主題撰寫簡單的連結性商業報告。能描述流程與基本目標，但在處理複雜子議題或抽象論證時表現吃力。句構中常有明顯的母語直譯痕跡。雖然在例行內部溝通中尚屬清晰，但其文字缺乏外部利害關係人互動或正式政策建議所需的專業磨練與風格細節。',
+                    '書面輸出侷限於簡短、碎片化訊息或基礎摘要。嚴重的語法錯誤與不當用字頻繁阻礙了管理概念的傳遞。在將資訊整理成邏輯線性序列上表現極其困難，導致敘事內容支離破碎。若缺乏大幅外部編輯，無法獨立草擬專業報告或提案。專業書面溝通仍是主要障礙。'
+                ]
+            }
+        };
+
+        let lang = 'en';
+        let theme = 'dark';
+        let radarChart = null;
+        let isSpeaking = false;
+        let isPaused = false;
+        let synth = window.speechSynthesis;
+        let utter = null;
+
+        window.onload = () => {
+            updateUI();
+            setRubric('discussion');
+            initChart();
+        };
+
+        function showCopyrightAlert() {
+            document.getElementById('alert-text').innerText = i18n[lang].copyright;
+            document.getElementById('alert-overlay').style.display = 'flex';
+            return false;
+        }
+
+        function closeAlert() {
+            document.getElementById('alert-overlay').style.display = 'none';
+        }
+
+        function toggleLanguage() {
+            lang = lang === 'en' ? 'zh-TW' : 'en';
+            updateUI();
+            const activeTab = document.querySelector('.gold-bg')?.id.replace('tab-', '') || 'discussion';
+            setRubric(activeTab);
+            initChart();
+            stopSpeech();
+        }
+
+        function toggleTheme() {
+            theme = theme === 'dark' ? 'light' : 'dark';
+            const body = document.getElementById('main-body');
+            const btn = document.getElementById('theme-btn');
+            body.classList.toggle('theme-dark', theme === 'dark');
+            body.classList.toggle('theme-light', theme === 'light');
+            btn.innerText = theme === 'dark' ? '🌙' : '🌞';
+            initChart();
+        }
+
+        function toggleNav() {
+            document.getElementById('nav-dropdown').classList.toggle('hidden');
+        }
+
+        function scrollToSection(id) {
+            toggleNav();
+            const el = document.getElementById(id);
+            window.scrollTo({ top: el.offsetTop - 64, behavior: 'smooth' });
+            setTimeout(() => startSpeech(id), 600);
+        }
+
+        function resetToHome() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            stopSpeech();
+        }
+        
+        function scrollWithoutNav(id) {
+            const el = document.getElementById(id);
+            window.scrollTo({ top: el.offsetTop - 64, behavior: 'smooth' });
+        }
+
+        function updateUI() {
+            document.getElementById('lang-btn').innerText = lang === 'en' ? '中文' : 'EN';
+            const keys = Object.keys(i18n[lang]);
+            keys.forEach(k => {
+                const id = k.replace(/[A-Z]/g, m => "-" + m.toLowerCase());
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = i18n[lang][k];
+            });
+            ['discussion', 'pitch', 'reading', 'writing'].forEach((t, i) => {
+                document.getElementById(`tab-${t}`).innerText = i18n[lang].tabs[i];
+            });
+        }
+
+        function setRubric(type) {
+            const container = document.getElementById('rubric-grid');
+            ['discussion', 'pitch', 'reading', 'writing'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === type) { btn.classList.add('gold-bg', 'text-white'); }
+                else { btn.classList.remove('gold-bg', 'text-white'); }
+            });
+
+            container.innerHTML = '';
+            const levels = i18n[lang].levels;
+            const content = rubricData[type][lang];
+            
+            content.forEach((text, i) => {
+                const card = document.createElement('div');
+                card.className = "rubric-card flex flex-col";
+                card.innerHTML = `
+                    <p class="text-[10px] gold-text font-bold mb-2 tracking-widest uppercase">Target Level ${4-i}</p>
+                    <h4 class="font-bold mb-4 text-sm">${levels[i]}</h4>
+                    <p class="text-[12px] opacity-75 leading-relaxed text-justify">${text}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function initChart() {
+            if (radarChart) radarChart.destroy();
+            const ctx = document.getElementById('heroRadar').getContext('2d');
+            const isDark = theme === 'dark';
+            const labels = lang === 'en' 
+                ? ['Case Logic', 'Decision Impact', 'Strategy Scaffolding', 'Precision', 'Fluency', 'Data Synthesis'] 
+                : ['個案邏輯', '決策影響力', '策略性鷹架', '精準度', '流暢度', '數據整合'];
+
+            radarChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Professional EMI',
+                        data: [98, 95, 92, 75, 80, 90],
+                        backgroundColor: 'rgba(212, 175, 55, 0.2)',
+                        borderColor: '#D4AF37',
+                        borderWidth: 2
+                    }, {
+                        label: 'General Academic',
+                        data: [65, 55, 45, 90, 85, 35],
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        borderColor: isDark ? '#ffffff' : '#004529',
+                        borderWidth: 1, borderDash: [5, 5]
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            grid: { color: 'rgba(212, 175, 55, 0.1)' },
+                            pointLabels: { color: isDark ? '#ffffff' : '#004529', font: { size: 10 } },
+                            ticks: { display: false }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function toggleSpeech() {
+            const btn = document.getElementById('play-pause-btn');
+            if (isSpeaking && !isPaused) {
+                synth.pause();
+                isPaused = true;
+                btn.innerText = "▶";
+            } else if (isSpeaking && isPaused) {
+                synth.resume();
+                isPaused = false;
+                btn.innerText = "Ⅱ";
+            } else {
+                startSpeech();
+            }
+        }
+
+        function startSpeech(sectionId = null) {
+            synth.cancel();
+            const btn = document.getElementById('play-pause-btn');
+            let text = "";
+            if (sectionId) {
+                text = document.getElementById(sectionId).innerText;
+            } else {
+                const content = document.querySelectorAll('h1, h2, h4, p');
+                text = Array.from(content).map(el => el.innerText).join('. ');
+            }
+            
+            utter = new SpeechSynthesisUtterance(text);
+            utter.lang = lang === 'en' ? 'en-GB' : 'zh-TW';
+            utter.rate = 0.95;
+            utter.onstart = () => { isSpeaking = true; isPaused = false; btn.innerText = "Ⅱ"; };
+            utter.onend = () => { isSpeaking = false; btn.innerText = "▶"; };
+            synth.speak(utter);
+        }
+
+        function stopSpeech() {
+            synth.cancel();
+            isSpeaking = false;
+            isPaused = false;
+            document.getElementById('play-pause-btn').innerText = "▶";
+        }
+    </script>
+</body>
+</html>
