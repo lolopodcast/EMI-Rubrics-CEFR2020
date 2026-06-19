@@ -87,9 +87,6 @@ const sanitizeName = (v) => v.replace(/[<>"'&\\]/g, '').slice(0, 50);
 // 5 constructs x 4 levels x (teacher + self-assessment)
 // ============================================================
 
-const CONSTRUCTS = ['listening', 'reading', 'pitching', 'discussion', 'writing'];
-const LEVELS = ['c12', 'b2', 'b1', 'belowb1']; // order: highest to lowest
-
 const dict_zh = {
   // ---- Brand / Nav ----
   brand: "EMI",
