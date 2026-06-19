@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Business EMI Assessment System</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -104,6 +105,7 @@ const dict_zh = {
   tab_pitching: "簡報提案",
   tab_discussion: "課堂討論",
   tab_writing: "商務書寫",
+  "tab_ai-principles": "AI 使用原則",
 
   // ---- Level labels ----
   level_c12: "精通使用者",
@@ -122,7 +124,7 @@ const dict_zh = {
 
   // ---- Self-assessment instructions ----
   self_instructions_title: "如何讀懂你的等級結果",
-  self_instructions_body: "每個等級有 5 條描述，符合 4 條以上即達該等級。若你在某等級符合 4 條以上，同時在下一個更高等級也符合 2-3 條，代表你正在進步中，可以標註為過渡等級（例如「B2/C1」），表示你已經穩定達到 B2，並開始展現 C1 的部分能力。",
+  self_instructions_body: "以下 20 題隨機混合排列，請依直覺勾選符合自己的描述——作答前看不到每題所屬的等級，請依題目內容本身判斷，不需要刻意湊滿某個等級。勾選後，該題旁邊會顯示所屬等級。每個等級中符合 4 條以上即達該等級；若同時在下一個更高等級也符合 2-3 條，會標註為過渡等級（例如「B2/C1」）。全部作答完成後，頁面最下方會顯示你的整體等級。",
   self_check_count: "已勾選 {n} / 5 項",
   self_result_label: "你的等級",
   self_result_transition: "過渡等級：你已穩定達到 {lower}，並開始展現 {upper} 的部分能力",
@@ -372,6 +374,7 @@ const dict_en = {
   tab_pitching: "Pitching",
   tab_discussion: "Discussion",
   tab_writing: "Business Writing",
+  "tab_ai-principles": "AI Principles",
 
   level_c12: "Proficient User",
   level_b2: "Independent User (Upper)",
@@ -387,7 +390,7 @@ const dict_en = {
   hero_desc: "This assessment framework borrows CEFR level concepts, designed for business school EMI courses. It covers five competency areas — Listening, Reading, Pitching, Discussion, and Writing — offering both teacher assessment and student self-assessment versions.",
 
   self_instructions_title: "How to Read Your Level Result",
-  self_instructions_body: "Each level has 5 descriptors; meeting 4 or more indicates that level. If you meet 4+ at one level while also meeting 2-3 at the next higher level, you are progressing — this can be marked as a transitional level (e.g. \"B2/C1\"), indicating stable achievement at B2 with emerging C1 characteristics.",
+  self_instructions_body: "The 20 descriptors below are shuffled randomly. Check any that match how you see yourself — the level for each item is hidden until you check it, so judge based on the statement itself rather than trying to fill out a particular level. Once checked, the item's level will appear beside it. Meeting 4 or more descriptors within a level indicates that level; meeting 2-3 at the next higher level marks a transitional result (e.g. \"B2/C1\"). Your overall level appears at the bottom once you're done.",
   self_check_count: "{n} / 5 selected",
   self_result_label: "Your Level",
   self_result_transition: "Transitional level: stable at {lower}, with emerging {upper} characteristics",
@@ -641,7 +644,9 @@ const IconCheck = ({size=16}) => (<svg width={size} height={size} viewBox="0 0 2
 const IconUsers = ({size=16}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>);
 
 const CONSTRUCTS = ['listening','reading','pitching','discussion','writing'];
-const CONSTRUCT_ICONS = { listening: IconHeadphones, reading: IconBookOpen, pitching: IconMic, discussion: IconMessageSquare, writing: IconPenTool };
+const PAGES = [...CONSTRUCTS, 'ai-principles'];
+const PAGE_ICONS = { listening: IconHeadphones, reading: IconBookOpen, pitching: IconMic, discussion: IconMessageSquare, writing: IconPenTool, 'ai-principles': IconCpu };
+const CONSTRUCT_ICONS = PAGE_ICONS;
 const LEVELS = ['c12','b2','b1','belowb1'];
 const LEVEL_COLORS = {
   c12:     { bar: 'bg-[#004030] dark:bg-[#D8C3A5]', text: 'text-[#004030] dark:text-[#D8C3A5]', border: 'border-[#004030] dark:border-[#D8C3A5]' },
@@ -735,6 +740,63 @@ const SelfLevelCard = ({ levelKey, label, tag, items, checkedSet, onToggle, t, i
             <p className="text-xs italic text-amber-700 dark:text-amber-400">{note}</p>
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// MIXED SELF-ASSESSMENT (20 shuffled items, level revealed on check)
+// ============================================================
+// Deterministic shuffle seeded by construct name so order is stable across renders
+// but differs per construct (avoids every construct showing items in level order).
+function seededShuffle(arr, seedStr) {
+  let seed = 0;
+  for (let i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) >>> 0;
+  const rand = () => {
+    seed = (seed * 1103515245 + 12345) >>> 0;
+    return seed / 4294967296;
+  };
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+const MixedSelfAssessment = ({ construct, constructData, checkedSet, onToggle, t }) => {
+  const items = React.useMemo(() => {
+    let flat = [];
+    LEVELS.forEach(lvl => {
+      constructData.self[lvl].forEach((text, i) => {
+        flat.push({ levelKey: lvl, idx: i, text, key: `${lvl}-${i}` });
+      });
+    });
+    return seededShuffle(flat, construct);
+  }, [construct, constructData]);
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 sm:p-6 animate-fade-in">
+      <div className="space-y-2">
+        {items.map((item) => {
+          const checked = checkedSet.has(item.key);
+          const c = LEVEL_COLORS[item.levelKey];
+          return (
+            <label key={item.key} className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors text-sm leading-relaxed ${checked ? 'bg-slate-50 dark:bg-slate-700/50' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
+              <input type="checkbox" checked={checked} onChange={() => onToggle(item.key)}
+                className="mt-0.5 w-4 h-4 rounded shrink-0 accent-[#004030] dark:accent-[#D8C3A5]" />
+              <span className="flex-1 flex items-center justify-between gap-3">
+                <span className={checked ? 'text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400'}>{item.text}</span>
+                {checked && (
+                  <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 ${c.text} animate-fade-in`}>
+                    {t[`level_${item.levelKey}_tag`]}
+                  </span>
+                )}
+              </span>
+            </label>
+          );
+        })}
       </div>
     </div>
   );
@@ -922,16 +984,27 @@ function App() {
       if (ttsState === 'paused') { speechSynthesis.resume(); setTtsState('playing'); return; }
       speechSynthesis.cancel();
       const sep = lang === 'zh' ? '。 ' : '. ';
-      const c = t.constructs[construct];
-      let texts = [t[`tab_${construct}`]];
-      LEVELS.forEach(lvl => {
-        texts.push(t[`level_${lvl}_tag`] + ' ' + t[`level_${lvl}`]);
-        if (mode === 'teacher') {
-          texts.push(c.teacher[lvl]);
-        } else {
-          texts.push(...c.self[lvl]);
-        }
-      });
+      let texts;
+      if (construct === 'ai-principles') {
+        texts = [
+          t.ai_section_title, t.ai_section_intro,
+          t.ai_rule_lr_title, t.ai_rule_lr_desc,
+          t.ai_rule_pd_title, t.ai_rule_pd_desc,
+          t.ai_rule_w_title, t.ai_rule_w_desc,
+          t.ai_section_quote
+        ];
+      } else {
+        const c = t.constructs[construct];
+        texts = [t[`tab_${construct}`]];
+        LEVELS.forEach(lvl => {
+          texts.push(t[`level_${lvl}_tag`] + ' ' + t[`level_${lvl}`]);
+          if (mode === 'teacher') {
+            texts.push(c.teacher[lvl]);
+          } else {
+            texts.push(...c.self[lvl]);
+          }
+        });
+      }
       texts = texts.filter(Boolean);
       const utt = new SpeechSynthesisUtterance(texts.join(sep));
       utt.rate = 0.95;
@@ -950,7 +1023,8 @@ function App() {
     }
   };
 
-  const constructData = t.constructs[construct];
+  const constructData = construct === 'ai-principles' ? null : t.constructs[construct];
+  const goHome = () => { setConstruct('listening'); setMode('teacher'); setMenuOpen(false); window.scrollTo({top:0,behavior:'smooth'}); };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -964,8 +1038,8 @@ function App() {
               <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 hover:bg-white/10 rounded-lg"><IconMenu/></button>
               {menuOpen && (
                 <div className="absolute top-full left-0 mt-1 w-64 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-5rem)] overflow-y-auto bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-[100]">
-                  {CONSTRUCTS.map((c, i) => {
-                    const Ic = CONSTRUCT_ICONS[c];
+                  {PAGES.map((c, i) => {
+                    const Ic = PAGE_ICONS[c];
                     return (
                       <button key={c} onClick={() => { setConstruct(c); setMenuOpen(false); window.scrollTo({top:0,behavior:'smooth'}); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 ${construct===c ? 'bg-[#004030]/5 dark:bg-[#D8C3A5]/10 font-bold text-[#004030] dark:text-[#D8C3A5]' : 'text-slate-700 dark:text-slate-300'}`}>
@@ -976,8 +1050,8 @@ function App() {
                 </div>
               )}
             </div>
-            <button onClick={() => { window.scrollTo({top:0,behavior:'smooth'}); }} className="p-2 hover:bg-white/10 rounded-lg"><IconHome size={18}/></button>
-            <button onClick={() => window.scrollTo({top:0,behavior:'smooth'})} className="flex items-center gap-2 min-w-0">
+            <button onClick={goHome} className="p-2 hover:bg-white/10 rounded-lg"><IconHome size={18}/></button>
+            <button onClick={goHome} className="flex items-center gap-2 min-w-0">
               <span className="font-serif font-black text-[#D8C3A5] text-base sm:text-lg tracking-widest shrink-0">{t.brand}</span>
               <span className="hidden md:inline font-serif font-bold text-sm truncate">{t.title}</span>
             </button>
@@ -1009,21 +1083,23 @@ function App() {
           </div>
 
           {/* Mode toggle */}
-          <div className="flex gap-2 mb-8">
-            <button onClick={() => setMode('teacher')}
-              className={`px-5 py-2.5 text-sm font-bold rounded-lg border transition ${mode==='teacher' ? 'bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] border-[#004030] dark:border-[#D8C3A5]' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
-              {t.mode_teacher}
-            </button>
-            <button onClick={() => setMode('self')}
-              className={`px-5 py-2.5 text-sm font-bold rounded-lg border transition ${mode==='self' ? 'bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] border-[#004030] dark:border-[#D8C3A5]' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
-              {t.mode_self}
-            </button>
-          </div>
+          {construct !== 'ai-principles' && (
+            <div className="flex gap-2 mb-8">
+              <button onClick={() => setMode('teacher')}
+                className={`px-5 py-2.5 text-sm font-bold rounded-lg border transition ${mode==='teacher' ? 'bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] border-[#004030] dark:border-[#D8C3A5]' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
+                {t.mode_teacher}
+              </button>
+              <button onClick={() => setMode('self')}
+                className={`px-5 py-2.5 text-sm font-bold rounded-lg border transition ${mode==='self' ? 'bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] border-[#004030] dark:border-[#D8C3A5]' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
+                {t.mode_self}
+              </button>
+            </div>
+          )}
 
-          {/* Construct tabs */}
+          {/* Page tabs (5 constructs + AI principles) */}
           <div className="flex flex-wrap gap-2 mb-8">
-            {CONSTRUCTS.map((c, i) => {
-              const Ic = CONSTRUCT_ICONS[c];
+            {PAGES.map((c, i) => {
+              const Ic = PAGE_ICONS[c];
               return (
                 <button key={c} onClick={() => setConstruct(c)}
                   className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold rounded-lg border transition ${construct===c ? 'bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] border-[#004030] dark:border-[#D8C3A5]' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
@@ -1033,49 +1109,50 @@ function App() {
             })}
           </div>
 
-          {/* Self-assessment instructions + result */}
-          {mode === 'self' && (
+          {construct === 'ai-principles' ? (
+            <AITransparencySection t={t} />
+          ) : (
             <>
-              <SelfInstructions t={t} />
-              <SelfResultBanner checkedSet={constructCheckedSet} t={t} />
+              {/* Self-assessment instructions + result */}
+              {mode === 'self' && (
+                <>
+                  <SelfInstructions t={t} />
+                  <SelfResultBanner checkedSet={constructCheckedSet} t={t} />
+                </>
+              )}
+
+              {/* Content */}
+              {mode === 'teacher' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5" key={`${construct}-${mode}`}>
+                  {LEVELS.map((lvl, idx) => {
+                    const isLowest = idx === LEVELS.length - 1;
+                    return (
+                      <TeacherLevelCard key={lvl} levelKey={lvl}
+                        label={t[`level_${lvl}`]} tag={t[`level_${lvl}_tag`]}
+                        text={constructData.teacher[lvl]}
+                        isLowest={isLowest} note={t.level_belowb1_note} />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div key={`${construct}-${mode}`}>
+                  <MixedSelfAssessment construct={construct} constructData={constructData}
+                    checkedSet={constructCheckedSet} onToggle={toggleCheck} t={t} />
+                </div>
+              )}
+
+              {/* AI Disclosure form — only on Writing construct, self mode */}
+              {mode === 'self' && construct === 'writing' && (
+                <AIDisclosureForm t={t} value={aiDisclosure} onChange={setAiDisclosure} />
+              )}
             </>
           )}
-
-          {/* Level cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5" key={`${construct}-${mode}`}>
-            {LEVELS.map((lvl, idx) => {
-              const isLowest = idx === LEVELS.length - 1;
-              if (mode === 'teacher') {
-                return (
-                  <TeacherLevelCard key={lvl} levelKey={lvl}
-                    label={t[`level_${lvl}`]} tag={t[`level_${lvl}_tag`]}
-                    text={constructData.teacher[lvl]}
-                    isLowest={isLowest} note={t.level_belowb1_note} />
-                );
-              }
-              return (
-                <SelfLevelCard key={lvl} levelKey={lvl}
-                  label={t[`level_${lvl}`]} tag={t[`level_${lvl}_tag`]}
-                  items={constructData.self[lvl]}
-                  checkedSet={constructCheckedSet} onToggle={toggleCheck} t={t}
-                  isLowest={isLowest} note={t.level_belowb1_note} />
-              );
-            })}
-          </div>
-
-          {/* AI Disclosure form — only on Writing construct, self mode */}
-          {mode === 'self' && construct === 'writing' && (
-            <AIDisclosureForm t={t} value={aiDisclosure} onChange={setAiDisclosure} />
-          )}
-
-          {/* AI Transparency Section — always visible at bottom */}
-          <AITransparencySection t={t} />
 
         </div>
       </main>
 
       {/* FOOTER */}
-      <footer className="h-8 bg-[#004030] flex items-center justify-between px-4 shrink-0">
+      <footer className="h-14 bg-[#004030] flex items-center justify-between px-4 sm:px-6 shrink-0">
         <span className="text-[#D8C3A5]/60 text-[10px] sm:text-xs">{t.date} · {t.copyright}</span>
         <span className="text-[#D8C3A5]/60 text-[10px] sm:text-xs flex items-center gap-3">
           <span>{t.architect_label}&nbsp;<a href={t.architect_url} target="_blank" rel="noopener noreferrer" className="text-[#D8C3A5] hover:text-white underline">{t.architect_name}</a></span>
