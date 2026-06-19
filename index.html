@@ -1,511 +1,1098 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business EMI Assessment System v1.0</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-green: #004529;
-            --accent-gold: #D4AF37;
-            --bg-light: #FDFBF7;
-            --text-dark: #1A1A1A;
-        }
-
-        body {
-            font-family: 'Inter', 'Noto Sans TC', sans-serif;
-            transition: background-color 0.3s, color 0.3s;
-            overflow-x: hidden;
-            user-select: none;
-        }
-
-        .theme-dark { background-color: var(--primary-green); color: #FFFFFF; }
-        .theme-light { background-color: var(--bg-light); color: var(--text-dark); }
-
-        .gold-text { color: var(--accent-gold); }
-        .gold-border { border-color: var(--accent-gold); }
-        .gold-bg { background-color: var(--accent-gold); }
-
-        .nav-header {
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
-            height: 64px;
-        }
-
-        .chart-container {
-            position: relative;
-            width: 100%;
-            max-width: 600px;
-            height: 350px;
-            margin: auto;
-        }
-
-        .rubric-card {
-            transition: all 0.3s ease;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            padding: 1.5rem;
-            height: auto;
-        }
-        
-        .theme-dark .rubric-card { background: rgba(255,255,255,0.05); }
-        .theme-light .rubric-card { background: rgba(0,0,0,0.03); }
-        
-        .rubric-card:hover { border-color: var(--accent-gold); transform: translateY(-2px); }
-
-        .dropdown-animate {
-            animation: slideDown 0.2s ease-out forwards;
-        }
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        footer { height: 32px; font-size: 11px; display: flex; align-items: center; border-top: 1px solid rgba(212, 175, 55, 0.2); }
-
-        .bg-custom-section { transition: background-color 0.3s; }
-        .theme-light .bg-custom-section { background-color: #F3F1ED !important; color: var(--text-dark); }
-        .theme-dark .bg-custom-section { background-color: #00301d !important; color: #FFFFFF; }
-
-        /* Custom Alert Overlay */
-        #alert-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.8);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business EMI Assessment System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @keyframes fadeInUp { from{opacity:0;transform:translateY(15px)} to{opacity:1;transform:translateY(0)} }
+  .animate-fade-in { animation: fadeInUp 0.5s ease-out forwards; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  .dark ::-webkit-scrollbar-thumb { background: #475569; }
+  header, footer, button, [role="button"], .ui-decoration { -webkit-user-select: none; user-select: none; }
+  input, textarea, select { -webkit-user-select: text; user-select: text; }
+  body { font-family: 'Inter', sans-serif; }
+  .font-serif { font-family: 'Merriweather', serif; }
+  .toast-anim { animation: toastIn 0.25s ease-out forwards; }
+  @keyframes toastIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+</style>
 </head>
-<body class="theme-dark antialiased" id="main-body" oncontextmenu="return showCopyrightAlert();">
+<body class="bg-[#f4f4f4] dark:bg-[#121212] text-slate-800 dark:text-slate-200 selection:bg-[#004030] selection:text-white dark:selection:bg-[#D8C3A5] dark:selection:text-[#004030]" id="root-body">
 
-    <!-- Copyright Alert Modal -->
-    <div id="alert-overlay" onclick="closeAlert()">
-        <div class="bg-white text-[#004529] p-8 rounded-sm max-w-sm text-center border-l-4 border-[#D4AF37]">
-            <h3 class="font-bold text-lg mb-2">Copyright Protection / 版權所有</h3>
-            <p class="text-sm opacity-80" id="alert-text">All content on this page is legally protected. Unauthorized copying or redistribution is strictly prohibited.</p>
-            <button class="mt-6 px-6 py-2 bg-[#004529] text-white text-xs font-bold rounded-sm">CLOSE / 關閉</button>
-        </div>
+<!-- Domain Lock + Iframe Busting (runs before React) -->
+<script>
+(function(){
+  const ALLOWED = ['lolopodcast.github.io','localhost','127.0.0.1'];
+  const REDIRECT = 'https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo';
+  if (!ALLOWED.some(d => location.hostname === d || location.hostname.endsWith('.'+d))) {
+    document.body.innerHTML = '<div style="text-align:center;padding:60px;font-family:sans-serif"><h1>Access Denied</h1><p>This resource is not authorised on this domain.</p></div>';
+    setTimeout(() => location.href = REDIRECT, 3000);
+    throw new Error('Domain not authorised');
+  }
+  if (window.self !== window.top) {
+    try { window.top.location.href = window.self.location.href; }
+    catch(e) { document.body.innerHTML = '<div style="text-align:center;padding:60px"><h1>Frame Blocked</h1><p>This content cannot be embedded.</p></div>'; }
+  }
+})();
+</script>
+
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+// ============================================================
+// COPYRIGHT TOAST + SMART RIGHT-CLICK / KEY INTERCEPTION
+// ============================================================
+const COPYRIGHT_MSG = 'Intellectual Property of Prof. Shihmin Lo';
+let showCopyrightToastFn = null;
+function showCopyrightToast() { if (showCopyrightToastFn) showCopyrightToastFn(); }
+
+document.addEventListener('contextmenu', e => {
+  const selection = window.getSelection().toString().trim();
+  const isImage = e.target.tagName === 'IMG' || e.target.closest('svg');
+  if (selection.length > 0) return true;
+  if (isImage) { e.preventDefault(); showCopyrightToast(); return; }
+  e.preventDefault();
+  showCopyrightToast();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'F12') { e.preventDefault(); showCopyrightToast(); return; }
+  if (e.ctrlKey && e.key.toLowerCase() === 'u') { e.preventDefault(); showCopyrightToast(); return; }
+  if (e.ctrlKey && e.shiftKey && ['i','j','c'].includes(e.key.toLowerCase())) { e.preventDefault(); showCopyrightToast(); return; }
+});
+
+document.addEventListener('dragstart', e => {
+  if (e.target.tagName === 'IMG' || e.target.closest('svg')) e.preventDefault();
+});
+
+const sanitizeStudentId = (v) => v.replace(/[^0-9]/g, '').slice(0, 12);
+const sanitizeName = (v) => v.replace(/[<>"'&\\]/g, '').slice(0, 50);
+
+// ============================================================
+// DICTIONARY
+// ============================================================
+
+// ============================================================
+// EMI Rubrics SPA - Data Dictionary Draft
+// 5 constructs x 4 levels x (teacher + self-assessment)
+// ============================================================
+
+const CONSTRUCTS = ['listening', 'reading', 'pitching', 'discussion', 'writing'];
+const LEVELS = ['c12', 'b2', 'b1', 'belowb1']; // order: highest to lowest
+
+const dict_zh = {
+  // ---- Brand / Nav ----
+  brand: "EMI",
+  title: "商管 EMI 評量系統",
+  subtitle: "參照 CEFR 等級概念之 ESAP 評量架構",
+  nav_home: "首頁",
+
+  // ---- Mode toggle ----
+  mode_teacher: "教師評核版",
+  mode_self: "學生自評版",
+
+  // ---- Construct tabs ----
+  tab_listening: "聽力理解",
+  tab_reading: "個案閱讀",
+  tab_pitching: "簡報提案",
+  tab_discussion: "課堂討論",
+  tab_writing: "商務書寫",
+
+  // ---- Level labels ----
+  level_c12: "精通使用者",
+  level_b2: "獨立使用者（進階）",
+  level_b1: "獨立使用者（基礎）",
+  level_belowb1: "基礎使用者",
+  level_belowb1_note: "建議先加強一般英文能力，再修習本課程",
+
+  level_c12_tag: "C1/C2",
+  level_b2_tag: "B2",
+  level_b1_tag: "B1",
+  level_belowb1_tag: "Below B1",
+
+  // ---- Hero ----
+  hero_desc: "本評量架構借用 CEFR 等級概念，針對商管學院 EMI 課程設計，涵蓋聽、讀、說（簡報／討論）、寫五大構面，提供教師評核與學生自評兩種版本。",
+
+  // ---- Self-assessment instructions ----
+  self_instructions_title: "如何讀懂你的等級結果",
+  self_instructions_body: "每個等級有 5 條描述，符合 4 條以上即達該等級。若你在某等級符合 4 條以上，同時在下一個更高等級也符合 2-3 條，代表你正在進步中，可以標註為過渡等級（例如「B2/C1」），表示你已經穩定達到 B2，並開始展現 C1 的部分能力。",
+  self_check_count: "已勾選 {n} / 5 項",
+  self_result_label: "你的等級",
+  self_result_transition: "過渡等級：你已穩定達到 {lower}，並開始展現 {upper} 的部分能力",
+
+  // ---- AI section ----
+  ai_section_title: "AI 使用透明度原則",
+  ai_section_intro: "隨著生成式 AI（GenAI）日益普及，本評量系統明訂各構面中 AI 輔助工具的使用界線，確保評量結果能真實反映學生的語言能力，同時不脫離真實職場與學習情境。",
+  ai_rule_lr_title: "聽力理解／個案閱讀",
+  ai_rule_lr_desc: "鼓勵使用 AI 輔助理解生字、背景知識或補充資料，但課堂測驗、個案討論與口頭詰問仍須展現個人即時理解能力。",
+  ai_rule_pd_title: "簡報提案／課堂討論",
+  ai_rule_pd_desc: "即興口說與問答環節不允許使用 AI 即時輔助，現場表現即為個人真實語言能力的展現。事前準備（如投影片設計、資料蒐集）可使用 AI 輔助。",
+  ai_rule_w_title: "商務書寫",
+  ai_rule_w_desc: "草稿階段歡迎使用 AI 輔助組織想法或校對文法，但正式繳交文件須附上簡短的「AI 使用揭露聲明」，說明使用範圍與自行修訂的部分。",
+  ai_section_quote: "真正的語言精通，不在於是否使用 AI 工具，而在於能否批判性地評估、修正、駕馭 AI 產出的內容，使其符合專業情境與個人觀點。",
+
+  // ---- AI disclosure form (Writing construct) ----
+  ai_disclosure_title: "AI 使用揭露聲明",
+  ai_disclosure_none: "未使用 AI 工具",
+  ai_disclosure_used: "使用 AI 工具，用途：",
+  ai_disclosure_used_ph: "例：文法校對、語句潤飾、結構建議",
+  ai_disclosure_revision: "自行修訂說明：",
+  ai_disclosure_revision_ph: "請說明你對 AI 產出內容做了哪些調整",
+  ai_disclosure_saved: "已儲存揭露聲明",
+  submit: "儲存",
+
+  // ---- Construct content ----
+  constructs: {
+    listening: {
+      teacher: {
+        c12: "能毫不費力地聽懂語速快、口音多元、邏輯跳躍的個案討論與簡報內容，包括同儕話語中隱含的立場與弦外之音。能在多人交叉發言、話題快速轉換的情境下，仍精準掌握每位發言者的論點重點與彼此之間的邏輯關聯。對專業術語、產業慣用語的理解毫無障礙，能在聽的當下同步進行批判性評估。能辨識 AI 語音工具或字幕翻譯可能存在的誤差或語意失真，並依賴自身理解進行修正判斷。",
+        b2: "能聽懂教授個案解說與同儕簡報的主要論點與細節，即使內容涉及不熟悉的次主題，也能掌握大致脈絡。在多人討論中能跟上話題轉換，但若語速過快或口音差異較大時，可能需要稍加專注或請求重複。能分辨發言者的論點是支持還是反對某個策略方向。",
+        b1: "能聽懂熟悉商管主題的個案解說與同儕發言，掌握主要論點與關鍵資料。但若討論涉及抽象概念、語速加快、或多人同時發言時，容易跟不上細節，需要依賴視覺輔助（投影片、白板）協助理解。能分辨討論大致的正反立場，但較難掌握細膩的語氣轉折。",
+        belowb1: "僅能聽懂語速緩慢、用詞簡單的個案說明，對快節奏的課堂討論或同儕簡報經常感到吃力。容易在多人交叉發言時失去討論脈絡，需要大量視覺輔助或事後文字補充才能跟上課堂進度。"
+      },
+      self: {
+        c12: [
+          "即使語速快、有口音，也能聽懂個案討論內容",
+          "能聽出同學話語中沒有明講、但暗示的立場",
+          "多人同時發言或話題快速轉換時，仍能跟上邏輯",
+          "聽得懂專業術語與產業慣用語，不需要特別解釋",
+          "邊聽邊能在心裡評估對方論點是否合理"
+        ],
+        b2: [
+          "能聽懂教授個案解說的主要論點與細節",
+          "不熟悉的次主題，也能大致掌握脈絡",
+          "多人討論時能跟上話題轉換，偶爾需要請求重複",
+          "能分辨發言者是支持還是反對某個策略方向",
+          "聽得懂大部分同儕簡報的內容，不需要投影片輔助"
+        ],
+        b1: [
+          "能聽懂熟悉主題的個案解說與主要論點",
+          "需要依賴投影片或白板輔助才能完全理解",
+          "討論涉及抽象概念時，容易跟不上細節",
+          "能分辨討論大致的正反立場",
+          "多人同時發言時，容易漏掉部分內容"
+        ],
+        belowb1: [
+          "只能聽懂語速慢、用詞簡單的說明",
+          "快節奏的課堂討論常常聽不太懂",
+          "多人交叉發言時容易完全跟不上",
+          "需要大量視覺輔助才能理解課堂內容",
+          "課後常需要文字資料才能補上沒聽懂的部分"
+        ]
+      }
+    },
+
+    reading: {
+      teacher: {
+        c12: "能毫不費力地解讀抽象且結構複雜的商業期刊、財務報告與法律架構。能辨識語氣中的微妙細節與諷刺，並洞察作者隱含的立場。從數千字非結構化資料中提取策略洞察極其高效，能合成為不失細節的高階經理人摘要。能將複雜的財務或技術文本，轉譯為非專業背景同學也能理解的摘要重點。能批判性檢視 AI 生成的文件摘要是否遺漏關鍵脈絡或產生語意偏差。在處理任何形式的書面商務溝通中，均展現出完全的學術自主性。",
+        b2: "能高度理解並快速閱讀專業領域的長篇專文與技術報告。掌握當代商業問題並評估文本中不同策略選項的優劣。能處理哈佛式個案研究中的複雜句法，偶爾需查閱生僻術語但不影響整體脈絡。能將個案中的關鍵資料或論點，整理成簡化版本與組員分享。能基於對技術與管理文件的深入閱讀，形成獨立的專業見解。",
+        b1: "能理解以頻繁出現的術語與標準專業語言為主的商業文本。能掌握教科書章節或產業快訊的核心重點。但在面對篇幅長且語言架構複雜的個案時閱讀速度顯著下降，且容易遺漏字裡行間的隱含意義。能識別日常商務材料中特定的預期資訊，但難以應對需要高度文化推論的抽象文本。",
+        belowb1: "閱讀能力侷限於簡短、簡單的商務文本、清單與基礎資訊。在面對標準商業個案研究的篇幅與架構複雜度時表現吃力。對於超過數百字的文本高度依賴翻譯工具。若缺乏大量簡化詮釋，無法識別專業文章中的核心策略問題或作者立場。"
+      },
+      self: {
+        c12: [
+          "能輕鬆讀懂複雜的財務報告、法律文件或學術期刊",
+          "能察覺文字中的語氣、諷刺或作者沒有明講的立場",
+          "能從大量資料中快速抓出重點，整理成精簡摘要",
+          "能把複雜的技術內容，用簡單的方式講給非專業背景的同學聽",
+          "閱讀任何商務文件都不太需要查字典或翻譯工具"
+        ],
+        b2: [
+          "能快速讀懂專業領域的長篇文章或技術報告",
+          "能評估個案中不同策略選項的優缺點",
+          "偶爾需要查生僻字，但不影響理解整體內容",
+          "能把個案重點整理成簡化版本，分享給組員",
+          "讀完技術文件後，能形成自己的專業見解"
+        ],
+        b1: [
+          "能讀懂教科書或產業新聞中常出現的專業詞彙與句型",
+          "能掌握文章的核心重點",
+          "篇幅長或架構複雜的個案，閱讀速度會明顯變慢",
+          "容易漏掉字裡行間沒有明講的意思",
+          "抽象或需要文化背景推論的內容，理解起來比較吃力"
+        ],
+        belowb1: [
+          "只能讀懂簡短、簡單的商務文本或條列資訊",
+          "標準商業個案的篇幅與複雜度讓我感到吃力",
+          "超過幾百字的文章，需要依賴翻譯工具才能讀懂",
+          "難以抓出文章中的核心策略問題",
+          "複雜句構常常讓我看不懂整段在講什麼"
+        ]
+      }
+    },
+
+    pitching: {
+      teacher: {
+        c12: "發表具備高度說服力與權威感的經理人級提案。能將複雜資料視覺化與口頭敘事完美結合，驅動目標客群進行決策。Q&A 應對無懈可擊，展現出在精準與優雅間應對敵意或突發提問的應變能力。能根據目標客群背景，即時調整論述的技術深度與用詞，讓非專業聽眾也能跟上重點。即使簡報架構或視覺輔助工具由 AI 協助生成，仍能精準掌握內容的策略邏輯與細節，不依賴讀稿。對組織模式的掌控創造了具備吸引力且無縫的敘事，並與企業目標高度一致。",
+        b2: "發表架構清晰、細節詳盡且邏輯連貫的商業提案。能有效運用專業連接詞將策略子議題與實證資料連結。在 Q&A 環節能自信應對大多數詢問，儘管在極端壓力下句法可能趨於簡化。遇到聽眾露出疑惑表情時，能嘗試換句話說再解釋一次。透過紮實的節奏與自信的語調維持聽眾參與感。",
+        b1: "能發表具備架構與線性邏輯的標準商業報告。依賴視覺輔助工具與講稿維持敘事；與目標客群互動具備架構但深度有限。能使用簡單正確的句型處理基礎 Q&A，但若直接面對技術挑戰時，難以在第一時間澄清複雜細節。簡報內容連貫，但缺乏高階競爭提案或爭取利害關係人認同所需的說服力火花與語言靈活度。",
+        belowb1: "簡報架構碎片化且難以跟隨。語言障礙頻繁導致聽眾遺失核心價值主張。嚴重的詞彙搜尋與語法修復破壞了流暢度，削弱了專業可信度。在即興問答環節表現極度吃力，需要簡化用詞或翻譯協助來彌補溝通斷層。"
+      },
+      self: {
+        c12: [
+          "能發表具備說服力、像專業經理人一樣的提案",
+          "能把複雜資料視覺化內容與口頭說明完美搭配",
+          "面對突發或刁難的提問，也能從容應對",
+          "能根據目標客群背景，調整內容的技術深度，讓不同背景的人都聽得懂",
+          "整場簡報敘事流暢，沒有明顯的邏輯斷點"
+        ],
+        b2: [
+          "簡報架構清楚，邏輯連貫",
+          "能用專業連接詞，把不同論點串連起來",
+          "能自信回答大部分 Q&A 問題",
+          "發現聽眾聽不懂時，會換個說法再解釋一次",
+          "簡報節奏穩定，能維持聽眾的注意力"
+        ],
+        b1: [
+          "能發表架構清楚、邏輯線性的標準商業報告",
+          "需要依賴投影片或講稿才能維持敘事",
+          "能用簡單正確的句子回答基礎問題",
+          "面對技術性追問時，較難馬上講清楚細節",
+          "簡報內容連貫，但說服力比較有限"
+        ],
+        belowb1: [
+          "簡報架構容易支離破碎，難以跟隨",
+          "常因為語言問題讓聽眾抓不到重點",
+          "頻繁卡詞或修正文法，影響流暢度",
+          "即興問答時非常吃力，常需要簡化用詞",
+          "只能傳遞基礎事實，難以建構完整論證"
+        ]
+      }
+    },
+
+    discussion: {
+      teacher: {
+        c12: "展現對即興學術辯論的絕對掌控力。能流暢地應對複雜個案動態並識別微妙的市場細節，無需費力尋找措辭。語言運用精準，能使用高階專業連接詞引導同儕達成策略結論。能即時將同儕的論點精準摘要與轉譯，協助跨領域同學跟上討論進度與邏輯脈絡。能在即興辯論中靈活運用 AI 輔助所累積的知識架構，但所有論證與回應均展現個人即時思辨能力，而非背誦 AI 產出的內容。溝通具備高度邏輯一致性，能將多元資料整合為一致的決策者觀點。語法瑕疵幾乎不存在，或完全不影響其展現出的專業經理人形象。",
+        b2: "能以連貫的邏輯流程積極參與專業討論。能有效應對教授或同儕的挑戰性追問，為策略立場提供基於證據的辯護。遇到同學沒聽懂某個論點時，能嘗試用較簡單的方式重新解釋。儘管在激烈辯論中偶爾需思考特定術語，但整體流暢度維持高標準。對複雜句型展現良好的控制力，且具備優秀的自我修正能力，確保溝通意圖與討論節奏不會因語法瑕疵受挫。",
+        b1: "使用紮實的商務詞彙參與討論。能清晰表達核心論點並解釋常規流程。然而，當討論轉向高度抽象或非線性領域時，會表現出局限性，較依賴預擬筆記或熟悉的邏輯模式。在熟悉個案主題上的溝通尚屬有效，但缺乏在無顯著準備下領導高風險談判或複雜策略綜合分析所需的語言靈活度。",
+        belowb1: "使用重覆句型與基礎商業套句傳遞有限資訊。頻繁的詞彙搜尋與語法修復動作嚴重阻礙了邏輯傳遞流暢度，使聽眾難以跟上複雜的推論鏈。雖然能滿足基礎課堂資訊交換需求，但尚無法獨立驅動具備深度管理思維的個案討論。"
+      },
+      self: {
+        c12: [
+          "即興參與個案辯論，不需要刻意尋找用詞",
+          "能識別個案中比較細微、不明顯的市場線索或矛盾",
+          "在同學跟不上討論節奏時，能幫忙摘要、轉譯前面的論點",
+          "能使用精準的專業連接詞，引導討論走向結論",
+          "整體溝通邏輯一致，語法瑕疵幾乎不影響表達"
+        ],
+        b2: [
+          "邏輯連貫地參與討論，能回應教授或同學的挑戰性提問",
+          "能為自己的論點提供具體證據或理由支持",
+          "當同學沒聽懂時，會嘗試用更簡單的說法重新解釋",
+          "偶爾想不到專業術語，但不影響整體討論的流暢度",
+          "能在討論中自我修正語法錯誤，不打斷溝通節奏"
+        ],
+        b1: [
+          "用基本的商務詞彙清楚表達自己的論點",
+          "能解釋熟悉主題的常規流程或邏輯",
+          "在討論變抽象或複雜時，比較依賴事先準備好的筆記",
+          "能跟上熟悉個案主題的討論內容",
+          "面對沒準備過的話題，需要較多時間組織想法"
+        ],
+        belowb1: [
+          "常常需要停下來想單字或修正文法",
+          "只能用基本句型傳遞簡單資訊",
+          "難以跟上複雜的推論鏈或邏輯轉折",
+          "較難獨立參與個案討論，需要較多外部協助",
+          "面對批判性辯論時，常感到吃力或無法即時回應"
+        ]
+      }
+    },
+
+    writing: {
+      teacher: {
+        c12: "撰寫出無瑕且具專業衝擊力、符合高國際標準的商業報告。語氣始終維持在經理人層級，運用精密的邏輯連接詞引導讀者理解複雜論證。能將多元來源資料合成為具說服力的文件，並以有效的邏輯架構突出關鍵議題。能依據目標客群背景調整文字的專業密度，讓技術性內容也能被跨部門讀者理解。能批判性地評估並修訂 AI 生成的初稿，使其符合專業情境、目標客群需求與個人觀點，而非全盤照搬。對組織模式的掌控使其能精準且具備風格地撰寫摘要，適合全球高階決策受眾。",
+        b2: "能產出清晰、細節詳盡且主題廣泛的商業論文、報告與提案。能有效運用結構化證據與理由支持觀點。準確度持續維持高標準，錯誤極少。風格非常適合專業職場，展現對正式商務句法與邏輯序列的紮實掌握。能根據目標客群選擇適當寫作風格，並能以專業深度強調各種事件或策略選擇的重要性。",
+        b1: "針對熟悉主題撰寫簡單的連結性商業報告。能描述流程與基本目標，但在處理複雜子議題或抽象論證時表現吃力。句構中常有明顯的母語直譯痕跡。雖然在例行內部溝通中尚屬清晰，但其文字缺乏外部利害關係人互動或正式政策建議所需的專業磨練與風格細節。",
+        belowb1: "書面輸出侷限於簡短、碎片化資訊或基礎摘要。嚴重的語法錯誤與不當用字頻繁阻礙了管理概念的傳遞。在將資訊整理成邏輯線性序列上表現極其困難，導致敘事內容支離破碎。"
+      },
+      self: {
+        c12: [
+          "能撰寫符合國際標準、具專業衝擊力的商業報告",
+          "文字始終維持經理人層級的語氣",
+          "能將多元來源的資料整合成具說服力的文件",
+          "能依目標客群背景調整文字的專業密度，讓不同部門的人都看得懂",
+          "整體文件架構精準，適合呈現給高階決策者"
+        ],
+        b2: [
+          "能撰寫清晰、細節詳盡的商業報告或提案",
+          "能用結構化的證據支持自己的論點",
+          "文字準確度高，錯誤很少",
+          "寫作風格符合專業職場的正式程度",
+          "能根據目標客群調整寫作風格"
+        ],
+        b1: [
+          "能針對熟悉主題撰寫簡單、連貫的商業報告",
+          "能描述流程與基本目標",
+          "處理複雜子議題或抽象論證時比較吃力",
+          "句構中偶爾會出現中文直譯的痕跡",
+          "寫法適合內部溝通，但還不夠正式或精緻"
+        ],
+        belowb1: [
+          "書面表達侷限於簡短、片段的資訊",
+          "常有明顯的語法錯誤或用字不當",
+          "難以把資訊組織成有邏輯的順序",
+          "沒有大量外部協助，難以獨立完成報告",
+          "書面溝通對我來說仍是主要障礙"
+        ]
+      }
+    }
+  },
+
+  // ---- Footer ----
+  date: "Version 2026.06.19",
+  copyright: "For Educational Use Only",
+  architect_label: "Architect:",
+  architect_name: "Prof. Shihmin Lo",
+  architect_url: "https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo"
+};
+
+// ============================================================
+// EMI Rubrics SPA - Data Dictionary Draft (English)
+// ============================================================
+
+const dict_en = {
+  brand: "EMI",
+  title: "Business EMI Assessment System",
+  subtitle: "ESAP Rubrics Referencing CEFR Level Concepts",
+  nav_home: "Home",
+
+  mode_teacher: "Teacher Assessment",
+  mode_self: "Student Self-Assessment",
+
+  tab_listening: "Listening",
+  tab_reading: "Case Reading",
+  tab_pitching: "Pitching",
+  tab_discussion: "Discussion",
+  tab_writing: "Business Writing",
+
+  level_c12: "Proficient User",
+  level_b2: "Independent User (Upper)",
+  level_b1: "Independent User (Lower)",
+  level_belowb1: "Basic User",
+  level_belowb1_note: "Recommended to strengthen general English proficiency before taking this course",
+
+  level_c12_tag: "C1/C2",
+  level_b2_tag: "B2",
+  level_b1_tag: "B1",
+  level_belowb1_tag: "Below B1",
+
+  hero_desc: "This assessment framework borrows CEFR level concepts, designed for business school EMI courses. It covers five competency areas — Listening, Reading, Pitching, Discussion, and Writing — offering both teacher assessment and student self-assessment versions.",
+
+  self_instructions_title: "How to Read Your Level Result",
+  self_instructions_body: "Each level has 5 descriptors; meeting 4 or more indicates that level. If you meet 4+ at one level while also meeting 2-3 at the next higher level, you are progressing — this can be marked as a transitional level (e.g. \"B2/C1\"), indicating stable achievement at B2 with emerging C1 characteristics.",
+  self_check_count: "{n} / 5 selected",
+  self_result_label: "Your Level",
+  self_result_transition: "Transitional level: stable at {lower}, with emerging {upper} characteristics",
+
+  ai_section_title: "AI Usage Transparency Principles",
+  ai_section_intro: "As generative AI (GenAI) becomes increasingly integrated into academic and professional life, this assessment system clarifies the boundaries of AI-assisted tool use across each competency area, ensuring that evaluation results authentically reflect students' language proficiency while remaining grounded in real-world learning and workplace contexts.",
+  ai_rule_lr_title: "Listening / Reading",
+  ai_rule_lr_desc: "Students are encouraged to use AI to clarify vocabulary, background knowledge, or supplementary materials. However, in-class assessments, case discussions, and oral questioning must demonstrate genuine, real-time comprehension.",
+  ai_rule_pd_title: "Pitching / Discussion",
+  ai_rule_pd_desc: "AI-assisted real-time support is not permitted during impromptu speaking or Q&A segments; live performance reflects authentic individual language ability. AI assistance is permitted during preparation (e.g. slide design, research).",
+  ai_rule_w_title: "Writing",
+  ai_rule_w_desc: "AI assistance is welcomed during the drafting stage for idea organization or grammar checking. Final submissions must include a brief \"AI Use Disclosure Statement\" specifying the scope of AI assistance and the student's own revisions.",
+  ai_section_quote: "True language mastery lies not in whether AI tools are used, but in the ability to critically evaluate, revise, and command AI-generated content to align with professional context and personal perspective.",
+
+  ai_disclosure_title: "AI Use Disclosure Statement",
+  ai_disclosure_none: "No AI tools used",
+  ai_disclosure_used: "AI tools used, purpose:",
+  ai_disclosure_used_ph: "e.g. grammar check, phrasing polish, structural suggestions",
+  ai_disclosure_revision: "Description of own revisions:",
+  ai_disclosure_revision_ph: "Describe what you changed from the AI-generated content",
+  ai_disclosure_saved: "Disclosure statement saved",
+  submit: "Save",
+
+  constructs: {
+    listening: {
+      teacher: {
+        c12: "Effortlessly comprehends fast-paced, accented, and non-linear case discussions and presentations, including implicit positions and subtext in peers' remarks. Maintains precise grasp of each speaker's key points and their logical relationships even amid cross-talk and rapid topic shifts. Has no difficulty with specialized terminology or industry jargon, and can conduct critical evaluation simultaneously while listening. Can identify potential errors or semantic distortion in AI voice tools or auto-captioning, relying on independent comprehension to make corrective judgments.",
+        b2: "Comprehends the main points and details of professors' case explanations and peers' presentations, grasping the general context even for unfamiliar sub-topics. Keeps pace with topic shifts in group discussions, though may need to focus more or request repetition when speech is fast or accents vary significantly. Can distinguish whether a speaker's argument supports or opposes a particular strategic direction.",
+        b1: "Comprehends case explanations and peer remarks on familiar business topics, grasping main points and key data. However, struggles to follow details when discussions turn abstract, speech accelerates, or multiple speakers overlap, relying on visual aids (slides, whiteboard) for support. Can distinguish general pro/con positions but has difficulty catching subtle shifts in tone.",
+        belowb1: "Can only comprehend case explanations delivered slowly with simple vocabulary, often struggling with fast-paced class discussions or peer presentations. Tends to lose track during cross-talk among multiple speakers, requiring extensive visual aids or follow-up written materials to keep pace with class progress."
+      },
+      self: {
+        c12: [
+          "I can understand case discussions even when speech is fast or accented",
+          "I can pick up on implied positions that classmates don't state directly",
+          "I can keep up with the logic when multiple people talk at once or topics shift quickly",
+          "I understand professional terminology and industry jargon without needing explanation",
+          "I can mentally evaluate whether an argument is sound while listening to it"
+        ],
+        b2: [
+          "I can understand the main points and details of a professor's case explanation",
+          "I can grasp the general context even for unfamiliar sub-topics",
+          "I can keep up with topic shifts in group discussions, occasionally needing repetition",
+          "I can tell whether a speaker supports or opposes a strategic direction",
+          "I can understand most peer presentations without relying on slides"
+        ],
+        b1: [
+          "I can understand case explanations and main points on familiar topics",
+          "I need slides or a whiteboard to fully understand the content",
+          "I struggle with details when discussions become abstract",
+          "I can distinguish general pro/con positions in a discussion",
+          "I tend to miss parts of the content when multiple people speak at once"
+        ],
+        belowb1: [
+          "I can only understand explanations delivered slowly with simple vocabulary",
+          "I often struggle to understand fast-paced class discussions",
+          "I lose track completely during cross-talk among multiple speakers",
+          "I need extensive visual aids to understand class content",
+          "I often need written materials afterward to fill in what I missed"
+        ]
+      }
+    },
+
+    reading: {
+      teacher: {
+        c12: "Effortlessly deciphers abstract and structurally complex business journals, financial reports, and legal frameworks. Can identify subtle nuances in tone, irony, and recognize implicit ideological stances of writers. Highly efficient at extracting strategic insights from thousands of words of unstructured data, synthesizing them into manager-level summaries without losing critical detail. Can translate complex financial or technical texts into summaries accessible to non-specialist classmates. Can critically assess whether AI-generated document summaries omit key context or introduce semantic bias. Demonstrates complete academic autonomy in processing any form of written business communication.",
+        b2: "Reads long, specialized articles and technical reports in their field with high comprehension and speed. Understands contemporary business problems and can evaluate the merits of different strategic options discussed in complex texts. Can handle complex syntax in Harvard-style case studies, occasionally consulting references for rare jargon without losing the thread. Can organize key data or arguments from a case into a simplified version to share with group members. Formulates independent professional opinions based on thorough reading of technical and management documents.",
+        b1: "Understands factual business texts consisting mainly of frequently-occurring terminology and standard professional language. Can grasp main ideas of textbook chapters or industry newsletters. However, reading speed decreases significantly when facing lengthy or linguistically complex cases, and implicit meanings may be missed. Identifies specific, predictable information in everyday business material but struggles with abstract texts requiring high degrees of cultural or contextual inference.",
+        belowb1: "Limited to understanding short, simple business texts, bulleted lists, and basic information. Struggles with the volume and structural complexity of standard business case studies. Heavily dependent on translation tools for any text exceeding a few hundred words. Without significant simplified interpretation, fails to identify the core strategic problem or the author's stance within a professional article."
+      },
+      self: {
+        c12: [
+          "I can easily read complex financial reports, legal documents, or academic journals",
+          "I can detect tone, irony, or an author's unstated position in a text",
+          "I can quickly extract key points from large volumes of material into a concise summary",
+          "I can explain complex technical content in simple terms to non-specialist classmates",
+          "I rarely need a dictionary or translation tool for any business document"
+        ],
+        b2: [
+          "I can quickly read long articles or technical reports in a specialized field",
+          "I can evaluate the pros and cons of different strategic options in a case",
+          "I occasionally need to look up rare terms, but it doesn't affect overall comprehension",
+          "I can organize key case points into a simplified version to share with my group",
+          "I can form my own professional opinion after reading a technical document"
+        ],
+        b1: [
+          "I can read frequently-occurring professional vocabulary and sentence patterns in textbooks or industry news",
+          "I can grasp the main points of an article",
+          "My reading speed slows down noticeably for long or structurally complex cases",
+          "I tend to miss meanings that aren't directly stated",
+          "Abstract content requiring cultural inference is harder for me to understand"
+        ],
+        belowb1: [
+          "I can only read short, simple business texts or bulleted information",
+          "The length and complexity of standard business cases is difficult for me",
+          "I rely on translation tools for anything over a few hundred words",
+          "I find it hard to identify the core strategic problem in an article",
+          "Complex sentence structures often leave me unable to understand a passage"
+        ]
+      }
+    },
+
+    pitching: {
+      teacher: {
+        c12: "Delivers highly persuasive, manager-level pitches that command authority. Expertly integrates complex data visualizations with verbal narrative to drive target audience decision-making. Q&A handling is flawless, demonstrating an ability to pivot and address hostile or unexpected questions with precision and professional grace. Adjusts the technical depth and terminology of the argument in real time based on the target audience, enabling non-specialist listeners to follow key points. Even when slide structure or visual aids are AI-assisted, maintains precise command of the strategic logic and detail without relying on a script. Mastery over organizational patterns creates a compelling, seamless narrative that aligns with corporate goals.",
+        b2: "Presents clear, detailed business proposals with consistent logical flow. Effectively uses professional connectors to link strategic sub-themes with empirical evidence. Can address most audience inquiries during Q&A sessions with confidence, though syntax may simplify under extreme pressure. When the audience looks puzzled, attempts to rephrase and explain again. Maintains strong audience engagement through controlled delivery and confident intonation.",
+        b1: "Can present standard business reports with structured, linear logic. Relies on visual aids and scripts to maintain the narrative; interaction with the target audience is structured but limited in depth. Handles basic Q&A using simple, correct phrases but may struggle to clarify complex technical points if challenged directly. The presentation is coherent but lacks the persuasive rhetorical spark and linguistic flexibility required for high-level competitive pitching or stakeholder buy-in.",
+        belowb1: "Presentation structure is fragmented and often difficult to follow. Language barriers frequently cause the audience to lose track of the core value proposition. Severe pauses for word-searching and grammatical repair disrupt the flow and undermine professional credibility. Struggles significantly with impromptu questions, requiring simplified phrasing to bridge the communication gap."
+      },
+      self: {
+        c12: [
+          "I can deliver a persuasive, manager-level pitch",
+          "I can seamlessly combine complex data visuals with verbal explanation",
+          "I can handle unexpected or challenging questions with composure",
+          "I can adjust the technical depth of my content based on the audience so different backgrounds can follow",
+          "My presentation narrative flows smoothly with no obvious logical gaps"
+        ],
+        b2: [
+          "My presentation structure is clear and logically consistent",
+          "I can use professional connectors to link different points together",
+          "I can confidently answer most Q&A questions",
+          "When the audience looks confused, I try rephrasing to explain again",
+          "My presentation pacing is steady and keeps the audience engaged"
+        ],
+        b1: [
+          "I can deliver a structured, linearly logical standard business report",
+          "I rely on slides or a script to maintain the narrative",
+          "I can answer basic questions using simple, correct sentences",
+          "I find it harder to clarify details quickly when challenged on technical points",
+          "My presentation is coherent, but its persuasiveness is somewhat limited"
+        ],
+        belowb1: [
+          "My presentation structure tends to be fragmented and hard to follow",
+          "Language issues often cause the audience to lose the main point",
+          "I frequently pause to search for words or fix grammar, disrupting flow",
+          "Impromptu Q&A is very difficult for me and I often need to simplify my wording",
+          "I can only convey basic facts and struggle to build a complete argument"
+        ]
+      }
+    },
+
+    discussion: {
+      teacher: {
+        c12: "Demonstrates absolute command of spontaneous academic debate. Can navigate complex case dynamics and identify subtle market nuances without searching for expressions. Language use is precise, employing high-level professional connectors to guide peers toward strategic conclusions. Can instantly summarize and mediate peers' arguments to help cross-disciplinary classmates follow the discussion's progress and logic. Can flexibly draw on AI-assisted knowledge structures during impromptu debate, while all arguments and responses demonstrate genuine real-time critical thinking rather than reciting AI-generated content. Communication is characterized by a sophisticated level of logical coherence, integrating diverse data points into a unified, decision-maker-ready perspective.",
+        b2: "Can engage actively in professional discussions with consistent logical flow. Effectively handles challenging follow-up questions from professors or peers, providing evidence-based defenses for strategic positions. When a classmate doesn't understand a point, attempts to re-explain it more simply. While occasional pauses for specialized terminology may occur during high-intensity debates, fluency remains at a high standard. Shows good control of complex sentence structures and can self-correct effectively without disrupting communicative intent.",
+        b1: "Participates in discussions using a solid repertoire of business vocabulary. Can express core arguments and explain routine processes clearly. However, may show limitations when the debate shifts into highly abstract or non-linear territory, relying more on prepared notes or familiar logical patterns. Communication is effective for familiar case topics but lacks the linguistic flexibility to lead high-stakes negotiations or complex strategic synthesis without significant preparation.",
+        belowb1: "Communicates limited information using repetitive sentence patterns and basic business formulae. Frequent pauses for lexical planning and grammatical repair significantly hinder the flow of logic, making it difficult for peers to follow complex chains of reasoning. While basic informational needs in a classroom setting can be met, cannot yet independently drive a sophisticated case discussion requiring deep managerial thinking."
+      },
+      self: {
+        c12: [
+          "I can participate in impromptu case debates without searching for words",
+          "I can identify subtle, less obvious market clues or contradictions in a case",
+          "When classmates can't keep up, I can summarize and translate earlier points for them",
+          "I can use precise professional connectors to guide a discussion toward a conclusion",
+          "My communication stays logically consistent, and grammatical slips barely affect my expression"
+        ],
+        b2: [
+          "I participate in discussions with consistent logical flow, responding to challenging questions",
+          "I can support my arguments with concrete evidence or reasoning",
+          "When a classmate doesn't understand, I try rephrasing more simply",
+          "I occasionally can't think of a technical term, but it doesn't disrupt overall fluency",
+          "I can self-correct grammar mistakes during a discussion without breaking the flow"
+        ],
+        b1: [
+          "I can clearly express my arguments using basic business vocabulary",
+          "I can explain routine processes or logic on familiar topics",
+          "I rely more on prepared notes when discussions become abstract or complex",
+          "I can follow discussions on familiar case topics",
+          "I need more time to organize my thoughts on unprepared topics"
+        ],
+        belowb1: [
+          "I often pause to search for words or fix grammar",
+          "I can only convey simple information using basic sentence patterns",
+          "I struggle to follow complex chains of reasoning or logical shifts",
+          "I find it hard to independently participate in case discussions without extra help",
+          "I often feel overwhelmed or unable to respond in time during critical debate"
+        ]
+      }
+    },
+
+    writing: {
+      teacher: {
+        c12: "Writes flawless, professionally impactful business reports meeting high international standards. Tone is consistently executive, using sophisticated logical connectors to guide readers through complex arguments. Can synthesize data from multiple sources into a coherent, persuasive document with an effective logical structure that highlights salient issues. Can adjust the technical density of writing based on the target audience, making technical content accessible to cross-departmental readers. Can critically evaluate and revise AI-generated drafts so that they align with professional context, audience needs, and personal perspective, rather than adopting them wholesale. Mastery over organizational patterns allows for precise and stylish summaries suitable for a global board-level audience.",
+        b2: "Can produce clear, detailed business essays, reports, and proposals on a wide range of subjects. Effectively supports viewpoints with structured evidence and reasons. Accuracy is consistently high, and errors are rare. The style is appropriate for a professional environment, showing a solid command of formal business syntax and logical sequencing. Selects a style appropriate to the target audience and can underline the significance of various events or strategic choices with professional depth.",
+        b1: "Writes simple, connected business reports on familiar topics. Can describe processes and basic goals but struggles with complex sub-themes or abstract justifications. Direct translation from the native language is often evident in sentence structures. While clear for routine internal communication, the writing lacks the professional polish and stylistic nuance required for external stakeholder engagement or formal policy recommendations.",
+        belowb1: "Written output is limited to short, fragmented messages or basic summaries. Severe grammatical errors and inappropriate word choices frequently obstruct the transmission of management concepts. Struggles significantly to organize information into a logical, linear sequence, resulting in a disjointed narrative."
+      },
+      self: {
+        c12: [
+          "I can write business reports that meet international standards and have professional impact",
+          "My writing consistently maintains an executive-level tone",
+          "I can integrate data from multiple sources into a persuasive document",
+          "I can adjust the technical density of my writing based on the target audience so different departments can follow",
+          "My document structure is precise and suitable for presentation to senior decision-makers"
+        ],
+        b2: [
+          "I can write clear, detailed business reports or proposals",
+          "I can support my arguments with structured evidence",
+          "My writing accuracy is high, with very few errors",
+          "My writing style matches a professional workplace's level of formality",
+          "I can adjust my writing style based on the target audience"
+        ],
+        b1: [
+          "I can write simple, connected business reports on familiar topics",
+          "I can describe processes and basic goals",
+          "I find it harder to handle complex sub-themes or abstract reasoning",
+          "My sentence structures occasionally show signs of direct translation from my native language",
+          "My writing suits internal communication but isn't yet formal or polished enough"
+        ],
+        belowb1: [
+          "My written output is limited to short, fragmented information",
+          "I often make noticeable grammatical errors or use inappropriate wording",
+          "I find it difficult to organize information into a logical sequence",
+          "Without substantial outside help, I struggle to complete a report independently",
+          "Written communication remains a major barrier for me"
+        ]
+      }
+    }
+  },
+
+  date: "Version 2026.06.19",
+  copyright: "For Educational Use Only",
+  architect_label: "Architect:",
+  architect_name: "Prof. Shihmin Lo",
+  architect_url: "https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo"
+};
+
+const dict = { zh: dict_zh, en: dict_en };
+
+</script>
+
+<script type="text/babel" data-presets="react">
+
+// ============================================================
+// ICON COMPONENTS (inline SVG)
+// ============================================================
+const IconMenu = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>);
+const IconHome = ({size=18}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>);
+const IconMoon = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>);
+const IconSun = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>);
+const IconPlay = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>);
+const IconPause = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>);
+const IconSquare = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14"/></svg>);
+const IconHeadphones = ({size=16}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>);
+const IconBookOpen = ({size=16}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>);
+const IconMic = ({size=16}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>);
+const IconMessageSquare = ({size=16}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>);
+const IconPenTool = ({size=16}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>);
+const IconCpu = ({size=16}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>);
+const IconCheck = ({size=16}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>);
+const IconUsers = ({size=16}) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>);
+
+const CONSTRUCTS = ['listening','reading','pitching','discussion','writing'];
+const CONSTRUCT_ICONS = { listening: IconHeadphones, reading: IconBookOpen, pitching: IconMic, discussion: IconMessageSquare, writing: IconPenTool };
+const LEVELS = ['c12','b2','b1','belowb1'];
+const LEVEL_COLORS = {
+  c12:     { bar: 'bg-[#004030] dark:bg-[#D8C3A5]', text: 'text-[#004030] dark:text-[#D8C3A5]', border: 'border-[#004030] dark:border-[#D8C3A5]' },
+  b2:      { bar: 'bg-emerald-600 dark:bg-emerald-400', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-600 dark:border-emerald-400' },
+  b1:      { bar: 'bg-amber-600 dark:bg-amber-400', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-600 dark:border-amber-400' },
+  belowb1: { bar: 'bg-slate-400 dark:bg-slate-500', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-400 dark:border-slate-500' }
+};
+
+// ============================================================
+// COPYRIGHT TOAST COMPONENT
+// ============================================================
+const CopyrightToast = () => {
+  const [msg, setMsg] = useState(null);
+  useEffect(() => {
+    showCopyrightToastFn = () => {
+      setMsg(COPYRIGHT_MSG);
+      setTimeout(() => setMsg(null), 2000);
+    };
+    return () => { showCopyrightToastFn = null; };
+  }, []);
+  if (!msg) return null;
+  return (
+    <div className="toast-anim fixed bottom-6 right-6 z-[200] bg-[#004030] text-white px-5 py-3 rounded-lg shadow-2xl border-l-4 border-[#D8C3A5] text-sm max-w-xs">
+      {msg}
     </div>
+  );
+};
 
-    <!-- Navigation -->
-    <nav class="fixed w-full z-50 nav-header px-4 md:px-8 bg-inherit flex items-center justify-between">
-        <div class="flex items-center space-x-4">
-            <button onclick="toggleNav()" class="p-2 hover:bg-white/10 rounded-sm transition">
-                <div class="w-5 h-0.5 gold-bg mb-1"></div>
-                <div class="w-5 h-0.5 gold-bg mb-1"></div>
-                <div class="w-3 h-0.5 gold-bg"></div>
-            </button>
-            <div onclick="resetToHome()" class="flex items-center cursor-pointer group">
-                <div class="bg-white text-[#004529] font-black px-2 py-0.5 rounded-sm mr-2 text-sm">EMI</div>
-                <span class="font-bold tracking-tight text-lg hidden sm:inline gold-text group-hover:opacity-80">EMI Rubrics</span>
-            </div>
+// ============================================================
+// LEVEL CARD (Teacher Mode)
+// ============================================================
+const TeacherLevelCard = ({ levelKey, label, tag, text, isLowest, note }) => {
+  const c = LEVEL_COLORS[levelKey];
+  return (
+    <div className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden animate-fade-in`}>
+      <div className={`h-1.5 ${c.bar}`}></div>
+      <div className="p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-3">
+          <span className={`text-xs font-bold uppercase tracking-widest ${c.text}`}>{tag}</span>
+          <span className={`text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 ${c.text}`}>{label}</span>
         </div>
+        <p className="text-sm sm:text-[15px] leading-relaxed text-slate-700 dark:text-slate-300 text-justify">{text}</p>
+        {isLowest && note && (
+          <div className="mt-4 pt-4 border-t border-dashed border-slate-300 dark:border-slate-600">
+            <p className="text-xs italic text-amber-700 dark:text-amber-400">{note}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
-        <div class="flex items-center space-x-4">
-            <!-- Voice Controls -->
-            <div class="flex items-center bg-black/20 rounded-full px-3 py-1 space-x-3 border border-gold-500/30">
-                <button id="play-pause-btn" onclick="toggleSpeech()" class="text-xs gold-text hover:scale-110 transition" title="Play/Pause">▶</button>
-                <button onclick="stopSpeech()" class="text-xs gold-text hover:scale-110 transition" title="Stop">■</button>
-            </div>
-            <button onclick="toggleLanguage()" class="text-[11px] font-bold px-2 py-1 border gold-border gold-text rounded-sm hover:bg-gold-500/10" id="lang-btn">中文</button>
-            <button onclick="toggleTheme()" class="p-2 text-sm gold-text" id="theme-btn">🌙</button>
+// ============================================================
+// SELF-ASSESSMENT CARD (5-select-4 logic)
+// ============================================================
+const SelfLevelCard = ({ levelKey, label, tag, items, checkedSet, onToggle, t, isLowest, note }) => {
+  const c = LEVEL_COLORS[levelKey];
+  const checkedCount = items.filter((_, i) => checkedSet.has(`${levelKey}-${i}`)).length;
+  const achieved = checkedCount >= 4;
+  return (
+    <div className={`bg-white dark:bg-slate-800 rounded-xl border-2 overflow-hidden transition-all animate-fade-in ${achieved ? c.border : 'border-slate-200 dark:border-slate-700'}`}>
+      <div className={`h-1.5 ${c.bar}`}></div>
+      <div className="p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold uppercase tracking-widest ${c.text}`}>{tag}</span>
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700 ${c.text}`}>{label}</span>
+          </div>
+          {achieved && (
+            <span className={`flex items-center gap-1 text-xs font-bold ${c.text}`}>
+              <IconCheck size={14}/> {t.self_check_count.replace('{n}', checkedCount)}
+            </span>
+          )}
         </div>
-
-        <!-- Dropdown Menu -->
-        <div id="nav-dropdown" class="hidden absolute top-16 left-0 w-64 bg-inherit shadow-2xl border-r gold-border dropdown-animate z-50">
-            <ul class="py-2 font-semibold text-sm">
-                <li class="px-6 py-4 hover:bg-gold-500/10 cursor-pointer border-l-4 border-transparent hover:border-[#D4AF37]" onclick="scrollToSection('hero')">HOME / 首頁</li>
-                <li class="px-6 py-4 hover:bg-gold-500/10 cursor-pointer border-l-4 border-transparent hover:border-[#D4AF37]" onclick="scrollToSection('analysis')">STRATEGY / 策略分析</li>
-                <li class="px-6 py-4 hover:bg-gold-500/10 cursor-pointer border-l-4 border-transparent hover:border-[#D4AF37]" onclick="scrollToSection('rubrics')">RUBRICS / 專業矩陣</li>
-                <li class="px-6 py-4 hover:bg-gold-500/10 cursor-pointer border-l-4 border-transparent hover:border-[#D4AF37]" onclick="scrollToSection('guidelines')">KSF / 成功關鍵</li>
-            </ul>
+        {!achieved && <p className="text-xs text-slate-400 mb-3">{t.self_check_count.replace('{n}', checkedCount)}</p>}
+        <div className="space-y-2">
+          {items.map((item, i) => {
+            const key = `${levelKey}-${i}`;
+            const checked = checkedSet.has(key);
+            return (
+              <label key={i} className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors text-sm leading-relaxed ${checked ? 'bg-slate-50 dark:bg-slate-700/50' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
+                <input type="checkbox" checked={checked} onChange={() => onToggle(key)}
+                  className="mt-0.5 w-4 h-4 rounded shrink-0 accent-[#004030] dark:accent-[#D8C3A5]" />
+                <span className={checked ? 'text-slate-800 dark:text-slate-100' : 'text-slate-600 dark:text-slate-400'}>{item}</span>
+              </label>
+            );
+          })}
         </div>
-    </nav>
+        {isLowest && note && (
+          <div className="mt-4 pt-4 border-t border-dashed border-slate-300 dark:border-slate-600">
+            <p className="text-xs italic text-amber-700 dark:text-amber-400">{note}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
-    <!-- Hero -->
-    <header id="hero" class="relative min-h-screen flex items-center pt-16 px-6">
-        <div class="max-w-6xl mx-auto w-full grid lg:grid-cols-2 gap-12 items-center">
+// ============================================================
+// SELF-ASSESSMENT RESULT BANNER
+// ============================================================
+const SelfResultBanner = ({ checkedSet, t }) => {
+  const achievedLevels = LEVELS.filter(lvl => {
+    const count = [0,1,2,3,4].filter(i => checkedSet.has(`${lvl}-${i}`)).length;
+    return count >= 4;
+  });
+  if (achievedLevels.length === 0) return null;
+
+  // Highest fully-achieved level = lowest index in LEVELS order (since LEVELS is highest-to-lowest)
+  const highestIdx = Math.min(...achievedLevels.map(l => LEVELS.indexOf(l)));
+  const highestLevel = LEVELS[highestIdx];
+
+  // Check transition: does the next-higher level (idx - 1) have 2-3 checked?
+  let transitionLabel = null;
+  if (highestIdx > 0) {
+    const upperLevel = LEVELS[highestIdx - 1];
+    const upperCount = [0,1,2,3,4].filter(i => checkedSet.has(`${upperLevel}-${i}`)).length;
+    if (upperCount >= 2 && upperCount <= 3) {
+      transitionLabel = { lower: t[`level_${highestLevel}_tag`], upper: t[`level_${upperLevel}_tag`] };
+    }
+  }
+
+  const c = LEVEL_COLORS[highestLevel];
+  return (
+    <div className={`rounded-xl border-2 ${c.border} bg-white dark:bg-slate-800 p-5 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in`}>
+      <div>
+        <p className="text-xs uppercase tracking-widest text-slate-400 mb-1">{t.self_result_label}</p>
+        <p className={`text-2xl font-serif font-black ${c.text}`}>
+          {t[`level_${highestLevel}_tag`]} — {t[`level_${highestLevel}`]}
+          {transitionLabel && <span className="text-base font-sans font-bold ml-2">({t[`level_${highestLevel}_tag`]}/{transitionLabel.upper})</span>}
+        </p>
+        {transitionLabel && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            {t.self_result_transition.replace('{lower}', t[`level_${highestLevel}_tag`]).replace('{upper}', transitionLabel.upper)}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// AI DISCLOSURE FORM (Writing construct, self-assessment mode)
+// ============================================================
+const AIDisclosureForm = ({ t, value, onChange }) => {
+  const [saved, setSaved] = useState(false);
+  const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 1800); };
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 sm:p-6 mt-6">
+      <h4 className="font-serif font-bold text-[#004030] dark:text-[#D8C3A5] mb-4 flex items-center gap-2">
+        <IconCpu size={18}/> {t.ai_disclosure_title}
+      </h4>
+      <div className="space-y-3">
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="radio" name="ai-used" checked={value.used === false}
+            onChange={() => onChange({ ...value, used: false })}
+            className="accent-[#004030] dark:accent-[#D8C3A5]" />
+          {t.ai_disclosure_none}
+        </label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="radio" name="ai-used" checked={value.used === true}
+            onChange={() => onChange({ ...value, used: true })}
+            className="accent-[#004030] dark:accent-[#D8C3A5]" />
+          {t.ai_disclosure_used}
+        </label>
+        {value.used && (
+          <div className="pl-6 space-y-3">
+            <input type="text" maxLength={200} placeholder={t.ai_disclosure_used_ph}
+              value={value.purpose || ''} onChange={e => onChange({ ...value, purpose: e.target.value.slice(0,200) })}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004030] dark:focus:ring-[#D8C3A5]" />
             <div>
-                <p class="gold-text font-bold tracking-[0.2em] uppercase text-xs mb-4" id="hero-subtitle">EXECUTIVE COMMUNICATION</p>
-                <h1 class="text-5xl md:text-6xl font-bold leading-tight mb-8" id="hero-title">Professional <br><span class="gold-text">EMI Mastery</span></h1>
-                <p class="text-lg opacity-75 mb-10 leading-relaxed max-w-xl" id="hero-desc">Assessment framework for business disciplines, focusing on translating data into impactful insights. Referencing CEFR 2020 for high-stakes professional environments.</p>
-                <div class="flex space-x-4">
-                    <button onclick="scrollWithoutNav('rubrics')" class="gold-bg text-white px-8 py-3 font-bold rounded-sm text-sm" id="btn-primary">EXPLORE RUBRICS</button>
-                    <a href="https://rm.coe.int/common-european-framework-of-reference-for-languages-learning-teaching/16809ea0d4" target="_blank" class="border gold-border gold-text px-8 py-3 font-bold rounded-sm text-sm hover:bg-gold-500/10" id="btn-secondary">CEFR 2020 REF</a>
-                </div>
+              <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">{t.ai_disclosure_revision}</label>
+              <textarea maxLength={500} placeholder={t.ai_disclosure_revision_ph} rows={3}
+                value={value.revision || ''} onChange={e => onChange({ ...value, revision: e.target.value.slice(0,500) })}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004030] dark:focus:ring-[#D8C3A5] resize-none" />
             </div>
-            <div class="hidden lg:block">
-                <div class="bg-white/5 backdrop-blur-md p-8 border border-white/10 rounded-sm">
-                    <div class="chart-container">
-                        <canvas id="heroRadar"></canvas>
-                    </div>
+          </div>
+        )}
+        <button onClick={handleSave}
+          className="mt-2 px-5 py-2 bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] text-sm font-bold rounded-lg hover:opacity-90 transition">
+          {saved ? `✓ ${t.ai_disclosure_saved}` : t.submit || 'Save'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ============================================================
+// AI TRANSPARENCY SECTION
+// ============================================================
+const AITransparencySection = ({ t }) => (
+  <section className="mt-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 sm:p-8 animate-fade-in">
+    <h2 className="text-xl sm:text-2xl font-serif font-black text-[#004030] dark:text-[#D8C3A5] mb-3 flex items-center gap-3">
+      <IconCpu size={24}/> {t.ai_section_title}
+    </h2>
+    <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 mb-6">{t.ai_section_intro}</p>
+    <div className="grid sm:grid-cols-3 gap-4 mb-6">
+      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border-l-4 border-[#D8C3A5]">
+        <h4 className="font-bold text-sm text-[#004030] dark:text-[#D8C3A5] mb-2">{t.ai_rule_lr_title}</h4>
+        <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t.ai_rule_lr_desc}</p>
+      </div>
+      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border-l-4 border-[#D8C3A5]">
+        <h4 className="font-bold text-sm text-[#004030] dark:text-[#D8C3A5] mb-2">{t.ai_rule_pd_title}</h4>
+        <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t.ai_rule_pd_desc}</p>
+      </div>
+      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border-l-4 border-[#D8C3A5]">
+        <h4 className="font-bold text-sm text-[#004030] dark:text-[#D8C3A5] mb-2">{t.ai_rule_w_title}</h4>
+        <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t.ai_rule_w_desc}</p>
+      </div>
+    </div>
+    <p className="text-sm italic text-center text-[#004030] dark:text-[#D8C3A5] font-serif px-4">{t.ai_section_quote}</p>
+  </section>
+);
+
+// ============================================================
+// SELF-ASSESSMENT INSTRUCTIONS BANNER
+// ============================================================
+const SelfInstructions = ({ t }) => (
+  <div className="bg-[#004030]/5 dark:bg-[#D8C3A5]/5 rounded-xl p-4 sm:p-5 border-l-4 border-[#D8C3A5] mb-6">
+    <h4 className="text-sm font-bold text-[#004030] dark:text-[#D8C3A5] mb-1.5">{t.self_instructions_title}</h4>
+    <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t.self_instructions_body}</p>
+  </div>
+);
+
+// ============================================================
+// MAIN APP
+// ============================================================
+function App() {
+  const LS_SELF = 'EMI_RUBRICS_self_assessment';
+  const LS_AI = 'EMI_RUBRICS_ai_disclosure';
+  const loadLS = (key, fb) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fb; } catch { return fb; } };
+
+  const [lang, setLang] = useState('en');
+  const [isDark, setIsDark] = useState(true);
+  const [mode, setMode] = useState('teacher'); // 'teacher' | 'self'
+  const [construct, setConstruct] = useState('listening');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [ttsState, setTtsState] = useState('idle');
+  const [checkedSet, setCheckedSet] = useState(() => new Set(loadLS(LS_SELF, [])));
+  const [aiDisclosure, setAiDisclosure] = useState(() => loadLS(LS_AI, { used: false, purpose: '', revision: '' }));
+  const menuRef = useRef(null);
+  const t = dict[lang];
+
+  useEffect(() => { document.documentElement.classList.toggle('dark', isDark); }, [isDark]);
+  useEffect(() => { try { localStorage.setItem(LS_SELF, JSON.stringify([...checkedSet])); } catch {} }, [checkedSet]);
+  useEffect(() => { try { localStorage.setItem(LS_AI, JSON.stringify(aiDisclosure)); } catch {} }, [aiDisclosure]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Reset checked set per-construct-per-level keys are global; clearing on construct switch
+  // is intentionally NOT done — each construct's keys are independent since levelKey is shared
+  // across constructs. We namespace by construct to avoid collision:
+  const toggleCheck = (key) => {
+    const fullKey = `${construct}:${key}`;
+    setCheckedSet(prev => {
+      const next = new Set(prev);
+      if (next.has(fullKey)) next.delete(fullKey); else next.add(fullKey);
+      return next;
+    });
+  };
+  const constructCheckedSet = {
+    has: (key) => checkedSet.has(`${construct}:${key}`)
+  };
+
+  const toggleLanguage = () => { setLang(l => l === 'en' ? 'zh' : 'en'); stopTTS(); };
+  const toggleTheme = () => setIsDark(d => !d);
+  const stopTTS = () => { if ('speechSynthesis' in window) speechSynthesis.cancel(); setTtsState('idle'); };
+
+  const handleTTS = (action) => {
+    if (!('speechSynthesis' in window)) return;
+    if (action === 'stop') { stopTTS(); return; }
+    if (action === 'pause') { speechSynthesis.pause(); setTtsState('paused'); return; }
+    if (action === 'play') {
+      if (ttsState === 'paused') { speechSynthesis.resume(); setTtsState('playing'); return; }
+      speechSynthesis.cancel();
+      const sep = lang === 'zh' ? '。 ' : '. ';
+      const c = t.constructs[construct];
+      let texts = [t[`tab_${construct}`]];
+      LEVELS.forEach(lvl => {
+        texts.push(t[`level_${lvl}_tag`] + ' ' + t[`level_${lvl}`]);
+        if (mode === 'teacher') {
+          texts.push(c.teacher[lvl]);
+        } else {
+          texts.push(...c.self[lvl]);
+        }
+      });
+      texts = texts.filter(Boolean);
+      const utt = new SpeechSynthesisUtterance(texts.join(sep));
+      utt.rate = 0.95;
+      const voices = speechSynthesis.getVoices();
+      if (lang === 'zh') {
+        const v = voices.find(v=>v.lang==='zh-TW'&&v.name.includes('Yating')) || voices.find(v=>v.lang==='zh-TW') || voices.find(v=>v.lang.startsWith('zh'));
+        if (v) utt.voice = v; utt.lang = 'zh-TW';
+      } else {
+        const v = voices.find(v=>v.lang==='en-GB'&&(v.name.includes('Male')||v.name.includes('Daniel'))) || voices.find(v=>v.lang==='en-GB') || voices.find(v=>v.lang.startsWith('en'));
+        if (v) utt.voice = v; utt.lang = 'en-GB';
+      }
+      utt.onend = () => setTtsState('idle');
+      utt.onerror = () => setTtsState('idle');
+      speechSynthesis.speak(utt);
+      setTtsState('playing');
+    }
+  };
+
+  const constructData = t.constructs[construct];
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <CopyrightToast />
+
+      {/* HEADER */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-[#004030] dark:bg-slate-900 text-white z-50 shadow-lg border-b border-[#D8C3A5]/30">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+            <div className="relative" ref={menuRef}>
+              <button onClick={() => setMenuOpen(!menuOpen)} className="p-2 hover:bg-white/10 rounded-lg"><IconMenu/></button>
+              {menuOpen && (
+                <div className="absolute top-full left-0 mt-1 w-64 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-5rem)] overflow-y-auto bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-[100]">
+                  {CONSTRUCTS.map((c, i) => {
+                    const Ic = CONSTRUCT_ICONS[c];
+                    return (
+                      <button key={c} onClick={() => { setConstruct(c); setMenuOpen(false); window.scrollTo({top:0,behavior:'smooth'}); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 ${construct===c ? 'bg-[#004030]/5 dark:bg-[#D8C3A5]/10 font-bold text-[#004030] dark:text-[#D8C3A5]' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <Ic size={16}/><span className="text-xs text-slate-400 mr-1">{i+1}.</span><span className="truncate">{t[`tab_${c}`]}</span>
+                      </button>
+                    );
+                  })}
                 </div>
+              )}
             </div>
-        </div>
-    </header>
-
-    <!-- Strategy -->
-    <section id="analysis" class="py-24 px-6 bg-white/5">
-        <div class="max-w-7xl mx-auto">
-            <div class="grid md:grid-cols-3 gap-16">
-                <div class="col-span-1">
-                    <h2 class="text-3xl font-bold mb-6 gold-text" id="s1-title">Strategic Gap</h2>
-                    <p class="opacity-70 text-sm leading-loose mb-8" id="s1-p1">While general English focuses on social fluency, EMI in business demands cognitive synthesis of professional domains. We prioritize logic and decision-making impact.</p>
-                    <hr class="gold-border border-t-2 w-12">
-                </div>
-                <div class="col-span-2 grid sm:grid-cols-2 gap-8">
-                    <div class="p-8 border border-gold-500/20 rounded-sm">
-                        <h4 class="font-bold mb-4 gold-text" id="s1-f1-t">Case Synthesis</h4>
-                        <p class="text-sm opacity-70" id="s1-f1-d">Going beyond textual understanding; it requires deconstructing market contradictions and rebuilding solutions with rigorous professional logic and precision.</p>
-                    </div>
-                    <div class="p-8 border border-gold-500/20 rounded-sm">
-                        <h4 class="font-bold mb-4 gold-text" id="s1-f2-t">Executive Logic</h4>
-                        <p class="text-sm opacity-70" id="s1-f2-d">The primary goal is communicative effectiveness. In high-pressure environments, using robust analytical structures to defend a position is the ultimate professional value.</p>
-                    </div>
-                </div>
+            <button onClick={() => { window.scrollTo({top:0,behavior:'smooth'}); }} className="p-2 hover:bg-white/10 rounded-lg"><IconHome size={18}/></button>
+            <button onClick={() => window.scrollTo({top:0,behavior:'smooth'})} className="flex items-center gap-2 min-w-0">
+              <span className="font-serif font-black text-[#D8C3A5] text-base sm:text-lg tracking-widest shrink-0">{t.brand}</span>
+              <span className="hidden md:inline font-serif font-bold text-sm truncate">{t.title}</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <div className="flex items-center bg-black/20 rounded-full px-2.5 sm:px-3 py-1 gap-2 sm:gap-3 border border-[#D8C3A5]/30">
+              {ttsState === 'playing'
+                ? <button onClick={() => handleTTS('pause')} className="text-[#D8C3A5] hover:scale-110 transition"><IconPause/></button>
+                : <button onClick={() => handleTTS('play')} className="text-[#D8C3A5] hover:scale-110 transition"><IconPlay/></button>}
+              <button onClick={() => handleTTS('stop')} className="text-[#D8C3A5] hover:scale-110 transition"><IconSquare/></button>
             </div>
+            <button onClick={toggleLanguage} className="text-[10px] sm:text-[11px] font-bold px-2 py-1.5 border border-[#D8C3A5] text-[#D8C3A5] rounded-sm hover:bg-[#D8C3A5]/10">
+              {lang === 'en' ? '中文' : 'EN'}
+            </button>
+            <button onClick={toggleTheme} className="p-2 text-[#D8C3A5]">{isDark ? <IconSun/> : <IconMoon/>}</button>
+          </div>
         </div>
-    </section>
+      </header>
 
-    <!-- Rubrics -->
-    <section id="rubrics" class="py-24 px-6 max-w-7xl mx-auto">
-        <div class="text-center mb-16">
-            <h2 class="text-3xl font-bold mb-4 gold-text" id="s2-title">Assessment Matrix</h2>
-            <p class="opacity-70 text-sm" id="s2-desc">Select core metrics to view detailed rubrics referencing professional disciplinary tasks and executive communication standards.</p>
+      {/* MAIN */}
+      <main className="flex-1 pt-16 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+
+          {/* Hero */}
+          <div className="mb-10 animate-fade-in">
+            <p className="text-xs font-bold tracking-[0.2em] uppercase text-[#D8C3A5] mb-3" style={{color:'#a08968'}}>ESAP ASSESSMENT FRAMEWORK</p>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-serif font-black text-[#004030] dark:text-[#D8C3A5] mb-4">{t.title}</h1>
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">{t.hero_desc}</p>
+          </div>
+
+          {/* Mode toggle */}
+          <div className="flex gap-2 mb-8">
+            <button onClick={() => setMode('teacher')}
+              className={`px-5 py-2.5 text-sm font-bold rounded-lg border transition ${mode==='teacher' ? 'bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] border-[#004030] dark:border-[#D8C3A5]' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
+              {t.mode_teacher}
+            </button>
+            <button onClick={() => setMode('self')}
+              className={`px-5 py-2.5 text-sm font-bold rounded-lg border transition ${mode==='self' ? 'bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] border-[#004030] dark:border-[#D8C3A5]' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
+              {t.mode_self}
+            </button>
+          </div>
+
+          {/* Construct tabs */}
+          <div className="flex flex-wrap gap-2 mb-8">
+            {CONSTRUCTS.map((c, i) => {
+              const Ic = CONSTRUCT_ICONS[c];
+              return (
+                <button key={c} onClick={() => setConstruct(c)}
+                  className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold rounded-lg border transition ${construct===c ? 'bg-[#004030] dark:bg-[#D8C3A5] text-white dark:text-[#004030] border-[#004030] dark:border-[#D8C3A5]' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-[#004030] dark:hover:border-[#D8C3A5]'}`}>
+                  <Ic size={14}/> {t[`tab_${c}`]}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Self-assessment instructions + result */}
+          {mode === 'self' && (
+            <>
+              <SelfInstructions t={t} />
+              <SelfResultBanner checkedSet={constructCheckedSet} t={t} />
+            </>
+          )}
+
+          {/* Level cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5" key={`${construct}-${mode}`}>
+            {LEVELS.map((lvl, idx) => {
+              const isLowest = idx === LEVELS.length - 1;
+              if (mode === 'teacher') {
+                return (
+                  <TeacherLevelCard key={lvl} levelKey={lvl}
+                    label={t[`level_${lvl}`]} tag={t[`level_${lvl}_tag`]}
+                    text={constructData.teacher[lvl]}
+                    isLowest={isLowest} note={t.level_belowb1_note} />
+                );
+              }
+              return (
+                <SelfLevelCard key={lvl} levelKey={lvl}
+                  label={t[`level_${lvl}`]} tag={t[`level_${lvl}_tag`]}
+                  items={constructData.self[lvl]}
+                  checkedSet={constructCheckedSet} onToggle={toggleCheck} t={t}
+                  isLowest={isLowest} note={t.level_belowb1_note} />
+              );
+            })}
+          </div>
+
+          {/* AI Disclosure form — only on Writing construct, self mode */}
+          {mode === 'self' && construct === 'writing' && (
+            <AIDisclosureForm t={t} value={aiDisclosure} onChange={setAiDisclosure} />
+          )}
+
+          {/* AI Transparency Section — always visible at bottom */}
+          <AITransparencySection t={t} />
+
         </div>
+      </main>
 
-        <div class="flex flex-wrap justify-center gap-2 mb-10">
-            <button onclick="setRubric('discussion')" id="tab-discussion" class="px-6 py-2 text-xs border gold-border gold-bg text-white font-bold">Discussion</button>
-            <button onclick="setRubric('pitch')" id="tab-pitch" class="px-6 py-2 text-xs border gold-border hover:bg-gold-500/10 font-bold">Pitching</button>
-            <button onclick="setRubric('reading')" id="tab-reading" class="px-6 py-2 text-xs border gold-border hover:bg-gold-500/10 font-bold">Case Reading</button>
-            <button onclick="setRubric('writing')" id="tab-writing" class="px-6 py-2 text-xs border gold-border hover:bg-gold-500/10 font-bold">Business Writing</button>
-        </div>
+      {/* FOOTER */}
+      <footer className="h-8 bg-[#004030] flex items-center justify-between px-4 shrink-0">
+        <span className="text-[#D8C3A5]/60 text-[10px] sm:text-xs">{t.date} · {t.copyright}</span>
+        <span className="text-[#D8C3A5]/60 text-[10px] sm:text-xs flex items-center gap-3">
+          <span>{t.architect_label}&nbsp;<a href={t.architect_url} target="_blank" rel="noopener noreferrer" className="text-[#D8C3A5] hover:text-white underline">{t.architect_name}</a></span>
+          <button onClick={() => window.scrollTo({top:0,behavior:'smooth'})} className="text-[#D8C3A5] hover:text-white font-bold">Top ↑</button>
+        </span>
+      </footer>
+    </div>
+  );
+}
 
-        <div id="rubric-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <!-- Dynamic Content -->
-        </div>
-    </section>
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
 
-    <!-- Success Factors (KSF) -->
-    <section id="guidelines" class="py-24 px-6 bg-custom-section">
-        <div class="max-w-7xl mx-auto">
-            <h2 class="text-2xl font-bold gold-text text-center mb-16" id="s3-title">Success Factors</h2>
-            <div class="grid md:grid-cols-3 gap-12 text-center">
-                <div class="p-4">
-                    <h4 class="font-bold mb-4" id="ksf1-t">Impact Weighting</h4>
-                    <p class="text-sm opacity-75 leading-relaxed" id="ksf1-d">Assessments should shift from error correction to impact measurement. The ability to drive consensus and decisions is the hallmark of professional EMI proficiency.</p>
-                </div>
-                <div class="p-4">
-                    <h4 class="font-bold mb-4" id="ksf2-t">Corporate Feedback</h4>
-                    <p class="text-sm opacity-75 leading-relaxed" id="ksf2-d">Feedback must mirror boardroom dynamics. Guide students on professional defense against challenges and engaging in constructive debate under professional pressure.</p>
-                </div>
-                <div class="p-4">
-                    <h4 class="font-bold mb-4" id="ksf3-t">Analytical Scaffolding</h4>
-                    <p class="text-sm opacity-75 leading-relaxed" id="ksf3-d">Provide linguistic 鷹架 via professional management frameworks, enabling high-level analysis even when students face specific vocabulary constraints.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+</script>
 
-    <!-- Footer -->
-    <footer class="fixed bottom-0 w-full bg-inherit px-6 z-50">
-        <div class="flex w-full justify-between items-center opacity-60">
-            <div class="flex space-x-4">
-                <span>v.1.0 | 2026/06</span>
-                <span class="cursor-pointer hover:underline gold-text" onclick="showCopyrightAlert()">© All Rights Reserved.</span>
-            </div>
-            <div class="flex items-center space-x-6">
-                <span>Architect: <a href="https://www.ibs.ncnu.edu.tw/index.php/faculty/tenured-professor/299-smlo" target="_blank" class="gold-text hover:underline">Prof. Shihmin Lo</a></span>
-                <button onclick="window.scrollTo({top:0, behavior:'smooth'})" class="gold-text font-bold uppercase">Top</button>
-            </div>
-        </div>
-    </footer>
-
-    <script>
-        const i18n = {
-            'en': {
-                heroSubtitle: 'EXECUTIVE COMMUNICATION',
-                heroTitle: 'Professional <br><span class="gold-text">EMI Mastery</span>',
-                heroDesc: 'Assessment framework for business disciplines, focusing on translating data into impactful insights. Referencing CEFR 2020 for high-stakes professional environments.',
-                btnPrimary: 'EXPLORE RUBRICS', btnSecondary: 'CEFR 2020 REF',
-                s1Title: 'Strategic Gap',
-                s1P1: 'While general English focuses on social fluency, EMI in business demands cognitive synthesis of professional domains. We prioritize logic and decision-making impact.',
-                s1F1T: 'Case Synthesis', s1F1D: 'Going beyond textual understanding; it requires deconstructing market contradictions and rebuilding solutions with rigorous professional logic and precision.',
-                s1F2T: 'Executive Logic', s1F2D: 'The primary goal is communicative effectiveness. In high-pressure environments, using robust analytical structures to defend a position is the ultimate professional value.',
-                s2Title: 'Assessment Matrix', s2Desc: 'Select core metrics to view detailed rubrics referencing professional disciplinary tasks and executive communication standards.',
-                s3Title: 'Success Factors',
-                ksf1T: 'Impact Weighting', ksf1D: 'Assessments should shift from error correction to impact measurement. The ability to drive consensus and decisions is the hallmark of professional EMI proficiency.',
-                ksf2T: 'Corporate Feedback', ksf2D: 'Feedback must mirror boardroom dynamics. Guide students on professional defense against challenges and engaging in constructive debate under professional pressure.',
-                ksf3T: 'Analytical Scaffolding', ksf3D: 'Provide linguistic 鷹架 via professional management frameworks, enabling high-level analysis even when students face specific vocabulary constraints.',
-                levels: ['C2/C1 (Expert)', 'B2 (Proficient)', 'B1 (Independent)', 'A2 (Developing)'],
-                tabs: ['Discussion', 'Pitching', 'Reading', 'Writing'],
-                copyright: 'All content on this page is legally protected. Unauthorized copying or redistribution is strictly prohibited.'
-            },
-            'zh-TW': {
-                heroSubtitle: '高階商務溝通',
-                heroTitle: '商管領域 <br><span class="gold-text">EMI 專業精通</span>',
-                heroDesc: '專為商管學門設計的評量架構，著重於將數據轉化為具備影響力的洞察。參照 CEFR 2020 標準，優化高風險專業環境下的溝通品質。',
-                btnPrimary: '探索專業矩陣', btnSecondary: 'CEFR 2020 資源',
-                s1Title: '策略性斷層',
-                s1P1: '一般英語側重於社交流暢度，而商管 EMI 則要求對專業領域的認知整合。我們優先考量邏輯傳遞與決策影響力。',
-                s1F1T: '個案綜合分析', s1F1D: '超越單純的文字理解，要求學生能解構市場矛盾，並運用嚴謹的專業邏輯與精準度重建解決方案。',
-                s1F2T: '高階決策邏輯', s1F2D: '核心目標在於溝通達成率。在壓力環境中，利用強韌的分析架構來捍衛立場，是專業價值最高體現。',
-                s2Title: '互動式評量矩陣', s2Desc: '請選擇核心指標，檢視參照專業學科任務與高階溝通標準所定義的詳細尺規內容。',
-                s3Title: '教學成功關鍵',
-                ksf1T: '影響力權重', ksf1D: '評量重點應從錯誤糾正轉向影響力衡量。能凝聚共識並驅動決策的能力，才是專業 EMI 精通的指標。',
-                ksf2T: '職場導向回饋', ksf2D: '回饋必須模仿真實職場互動。指導學生如何針對專業挑戰進行應對防禦，並在專業壓力下進行建設性辯論。',
-                ksf3T: '分析性鷹架', ksf3D: '透過專業管理架構提供語言 鷹架，讓學生在面對特定字彙受限時，仍能產出具備高度深度的分析論點。',
-                levels: ['C2/C1 (專家)', 'B2 (精通)', 'B1 (獨立)', 'A2 (發展中)'],
-                tabs: ['課堂討論', '簡報提案', '個案閱讀', '商務書寫'],
-                copyright: '本網頁所有內容受法律保護。未經授權禁止複製或二次發佈。'
-            }
-        };
-
-        const rubricData = {
-            discussion: {
-                'en': [
-                    'Demonstrates absolute command of spontaneous academic debate. Can navigate complex case dynamics and identify subtle market nuances without searching for expressions. Language use is precise, employing high-level professional connectors to guide peers toward strategic conclusions. Communication is characterized by a sophisticated level of logical coherence, integrating diverse data points into a unified boardroom-ready perspective. Mistakes are virtually non-existent or do not detract from the professional manager image.',
-                    'Can engage actively in professional discussions with consistent logical flow. Effectively handles challenging follow-up questions from professors or peers, providing evidence-based defenses for strategic positions. While occasional pauses for specialized terminology may occur during high-intensity debates, fluency remains high. Shows good control of complex sentence structures and can self-correct effectively without disrupting the communicative intent or the timing of the boardroom simulation.',
-                    'Participates in discussions using a solid repertoire of business vocabulary. Can express core arguments and explain routine processes clearly. However, may show limitations when the debate shifts into highly abstract or non-linear territories, relying more on prepared notes or familiar logical patterns. Communication is effective for familiar case topics but lacks the linguistic flexibility to lead high-stakes negotiations or complex strategic synthesis without significant preparation.',
-                    'Communicates limited information using repetitive sentence patterns and basic business formulae. Frequent pauses for lexical planning and grammatical repair significantly hinder the flow of logic, making it difficult for peers to follow complex chains of reasoning. While they can satisfy basic informational needs in a classroom setting, they cannot yet independently drive a sophisticated case discussion or engage in deep critical debate without extensive external support.'
-                ],
-                'zh-TW': [
-                    '展現對即興學術辯論的絕對掌控力。能流暢地應對複雜個案動態並識別微妙的市場細節，無需費力尋找措辭。語言運用精準，能使用高階專業連接詞引導同儕達成策略結論。溝通具備高度邏輯一致性，能將多元數據整合為一致的決策者觀點。語法瑕疵幾乎不存在，或完全不影響其展現出的專業經理人形象。',
-                    '能以連貫的邏輯流程積極參與專業討論。能有效應對教授或同儕的挑戰性追問，為策略立場提供基於證據的辯護。儘管在激烈辯論中偶爾需思考特定術語，但整體流暢度維持高標。對複雜句型展現良好的控制力，且具備優秀的自我修正能力，確保溝通意圖與討論節奏不會因語法瑕疵受挫。',
-                    '使用紮實的商務詞彙參與討論。能清晰表達核心論點並解釋常規流程。然而，當討論轉向高度抽象或非線性領域時，會表現出局限性，較依賴預擬筆記或熟悉的邏輯模式。在熟悉個案主題上的溝通尚屬有效，但缺乏在無顯著準備下領導高風險談判或複雜策略綜合分析所需的語言靈活度。',
-                    '使用重覆句型與基礎商業套句傳遞有限資訊。頻繁的詞彙搜尋與語法修復動作嚴重阻礙了邏輯傳遞流暢度，使聽眾難以跟上複雜的推論鏈。雖然能滿足基礎課堂資訊交換需求，但尚無法獨立驅動具備深度管理思維的個案討論，或在缺乏大量外部協助下參與深層的批判性辯論。'
-                ]
-            },
-            pitch: {
-                'en': [
-                    'Delivers highly persuasive, manager-level pitches that command authority. Expertly integrates complex data visualizations with verbal narrative to drive decisive business actions. Q&A handling is flawless, demonstrating an ability to pivot and address hostile or unexpected questions with precision and professional grace. Mastery over organizational patterns creates a compelling, seamless narrative that aligns with corporate goals. The impact is indistinguishable from a top-tier global strategy consultant.',
-                    'Presents clear, detailed business proposals with consistent logical flow. Effectively uses professional connectors to link strategic sub-themes with empirical evidence. Can address most audience inquiries during Q&A sessions with confidence, though syntax may simplify under extreme pressure. Maintains strong audience engagement through controlled delivery and confident intonation. Accuracy is high, and the student can explain strategic viewpoints by weighing advantages and disadvantages with professional clarity.',
-                    'Can present standard business reports with structured, linear logic. Relies on visual aids and scripts to maintain the narrative; interaction with the audience is structured but limited in depth. Handles basic Q&A using simple, correct phrases but may struggle to clarify complex technical points if challenged directly. The presentation is coherent but lacks the persuasive rhetorical "spark" and linguistic flexibility required for high-level competitive pitching or stakeholder buy-in.',
-                    'Presentation structure is fragmented and often difficult to follow. Language barriers frequently cause the audience to lose track of the core value proposition. Severe pauses for word-searching and grammatical repair disrupt the flow and undermine professional credibility. Struggles significantly with impromptu questions, requiring simplified phrasing or translation assistance to bridge the communication gap. While basic facts can be delivered, independent construction of a cohesive strategic argument is not yet possible.'
-                ],
-                'zh-TW': [
-                    '發表具備高度說服力與權威感的經理人級提案。能將複雜數據視覺化與口頭敘事完美結合，驅動聽眾進行決策。Q&A 應對無懈可擊，展現出在精準與優雅間應對敵意或突發提問的應變能力。對組織模式的掌控創造了具備吸引力且無縫的敘事，並與企業目標高度一致。其專業衝擊力與頂尖全球策略顧問無異。',
-                    '發表結構清晰、細節詳盡且邏輯連貫的商業提案。能有效運用專業連接詞將策略子議題與實證數據連結。在 Q&A 環節能自信應對大多數詢問，儘管在極端壓力下句法可能趨於簡化。透過紮實的節奏與自信的語調維持聽眾參與感。準確度高，能以專業的清晰度衡量不同策略選項的優劣並解釋觀點。',
-                    '能發表具備結構與線性邏輯的標準商業報告。依賴視覺輔助工具與講稿維持敘事；與聽眾互動具備結構但深度有限。能使用簡單正確的句型處理基礎 Q&A，但若直接面對技術挑戰時，難以在第一時間澄清複雜細節。簡報內容連貫，但缺乏高階競爭提案或爭取利害關係人認同所需的說服力火花與語言靈活度。',
-                    '簡報結構碎片化且難以跟隨。語言障礙頻繁導致聽眾遺失核心價值主張。嚴重的詞彙搜尋與語法修復破壞了流暢度，削弱了專業可信度。在即興問答環節表現極度吃力，需要簡化用詞或翻譯協助來彌補溝通斷層。雖然能傳遞基礎事實，但尚無法獨立建構出具備凝聚力的策略論證。'
-                ]
-            },
-            reading: {
-                'en': [
-                    'Effortlessly deciphers abstract and structurally complex business journals, financial reports, and legal frameworks. Can identify subtle nuances in tone, irony, and recognize implicit ideological stances of writers. High efficiency in extracting strategic insights from thousands of words of unstructured data, synthesizing information for manager summaries without loss of critical detail. Demonstrates complete academic autonomy in processing any form of written business communication.',
-                    'Reads long, specialized articles and technical reports in their field with high comprehension and speed. Understands contemporary business problems and can evaluate the merits of different strategic options discussed in complex texts. Can handle complex syntax in Harvard-style case studies, occasionally consulting dictionaries for rare jargon without losing the thread. Formulates independent professional opinions based on a thorough reading of technical and management documents.',
-                    'Understands factual business texts consisting mainly of high-frequency terminology and standard professional language. Can grasp main ideas of textbook chapters or industry newsletters. However, reading speed decreases significantly when facing lengthy or linguistically complex cases, and implicit meanings may be missed. Identifies specific, predictable information in everyday business material but struggles with abstract texts requiring high degrees of cultural or contextual inference.',
-                    'Limited to understanding short, simple business texts, bulleted lists, and basic messages. Struggles with the volume and structural complexity of standard business case studies. Heavily dependent on translation tools for any text exceeding a few hundred words. Fails to identify the core strategic problem or the author’s stance within a professional article without significant simplified interpretation. Inability to process complex sentences prevents independent academic study in business.'
-                ],
-                'zh-TW': [
-                    '毫不費力地解讀抽象且結構複雜的商業期刊、財務報告與法律框架。能辨識語氣中的微妙細節與諷刺，並洞察作者隱含的立場。從數千字非結構化數據中提取策略洞察極其高效，能合成為不失細節的高階經理人摘要。在處理任何形式的書面商務溝通中，均展現出完全的學術自主性。',
-                    '能高度理解並快速閱讀專業領域的長篇專文與技術報告。掌握當代商業問題並評估文本中不同策略選項的優劣。能處理哈佛式個案研究中的複雜句法，偶爾需查閱生僻術語但不影響整體脈絡。能基於對技術與管理文件的深入閱讀，形成獨立的專業見解。',
-                    '能理解以高頻術語與標準專業語言為主的商業文本。能掌握教科書章節或產業快訊的核心重點。但在面對篇幅長且語言結構複雜的個案時閱讀速度顯著下降，且容易遺漏字裡行間的隱含意義。能識別日常商務材料中特定的預期資訊，但難以應對需要高度文化推論的抽象文本。',
-                    '閱讀能力侷限於簡短、簡單的商務文本、清單與基礎訊息。在面對標準商業個案研究的篇幅與結構複雜度時表現吃力。對於超過數百字的文本高度依賴翻譯工具。若缺乏大量簡化詮釋，無法識別專業文章中的核心策略問題或作者立場。無法處理複雜句構導致無法在商務環境下進行獨立學術研究。'
-                ]
-            },
-            writing: {
-                'en': [
-                    'Writes flawless, professionally impactful business reports meeting high international standards. Tone is consistently executive, using sophisticated logical connectors to guide readers through complex arguments. Can synthesize data from multiple sources into a coherent, persuasive document with an effective logical structure that highlights salient issues. Mastery over organizational patterns allows for precise and stylish summaries of specialized works suitable for a global board-level audience.',
-                    'Can produce clear, detailed business essays, reports, and proposals on a wide range of subjects. Effectively supports viewpoints with structured evidence and reasons. Accuracy is consistently high, and errors are rare. The style is appropriate for a professional environment, showing a solid command of formal business syntax and logical sequencing. Selects a style appropriate to the target reader and can underline the significance of various events or strategic choices with professional depth.',
-                    'Writes simple, connected business reports on familiar topics. Can describe processes and basic goals but struggles with complex sub-themes or abstract justifications. Direct translation from the native language is often evident in sentence structures. While clear for routine internal communication, the writing lacks the professional polish and stylistic nuance required for external stakeholder engagement or formal policy recommendations.',
-                    'Written output is limited to short, fragmented messages or basic summaries. Severe grammatical errors and inappropriate word choices frequently obstruct the transmission of management concepts. Struggles significantly to organize information into a logical linear sequence, resulting in a disjointed narrative. Cannot independently draft a professional report or persuasive proposal without extensive editing and external help. Professional written communication remains a major barrier.'
-                ],
-                'zh-TW': [
-                    '撰寫出無瑕且具專業衝擊力、符合高國際標準的商業報告。語氣始終維持在經理人層級，運用精密的邏輯連接詞引導讀者理解複雜論證。能將多元來源數據合成為具說服力的文件，並以有效的邏輯結構突出關鍵議題。對組織模式的掌控使其能精準且具備風格地撰寫摘要，適合全球高階決策受眾。',
-                    '能產出清晰、細節詳盡且主題廣泛的商業論文、報告與提案。能有效運用結構化證據與理由支持觀點。準確度持續維持高標，錯誤極少。風格非常適合專業職場，展現對正式商務句法與邏輯序列的紮實掌握。能根據受眾選擇適當寫作風格，並能以專業深度強調各種事件或策略選擇的重要性。',
-                    '針對熟悉主題撰寫簡單的連結性商業報告。能描述流程與基本目標，但在處理複雜子議題或抽象論證時表現吃力。句構中常有明顯的母語直譯痕跡。雖然在例行內部溝通中尚屬清晰，但其文字缺乏外部利害關係人互動或正式政策建議所需的專業磨練與風格細節。',
-                    '書面輸出侷限於簡短、碎片化訊息或基礎摘要。嚴重的語法錯誤與不當用字頻繁阻礙了管理概念的傳遞。在將資訊整理成邏輯線性序列上表現極其困難，導致敘事內容支離破碎。若缺乏大幅外部編輯，無法獨立草擬專業報告或提案。專業書面溝通仍是主要障礙。'
-                ]
-            }
-        };
-
-        let lang = 'en';
-        let theme = 'dark';
-        let radarChart = null;
-        let isSpeaking = false;
-        let isPaused = false;
-        let synth = window.speechSynthesis;
-        let utter = null;
-
-        window.onload = () => {
-            updateUI();
-            setRubric('discussion');
-            initChart();
-        };
-
-        function showCopyrightAlert() {
-            document.getElementById('alert-text').innerText = i18n[lang].copyright;
-            document.getElementById('alert-overlay').style.display = 'flex';
-            return false;
-        }
-
-        function closeAlert() {
-            document.getElementById('alert-overlay').style.display = 'none';
-        }
-
-        function toggleLanguage() {
-            lang = lang === 'en' ? 'zh-TW' : 'en';
-            updateUI();
-            const activeTab = document.querySelector('.gold-bg')?.id.replace('tab-', '') || 'discussion';
-            setRubric(activeTab);
-            initChart();
-            stopSpeech();
-        }
-
-        function toggleTheme() {
-            theme = theme === 'dark' ? 'light' : 'dark';
-            const body = document.getElementById('main-body');
-            const btn = document.getElementById('theme-btn');
-            body.classList.toggle('theme-dark', theme === 'dark');
-            body.classList.toggle('theme-light', theme === 'light');
-            btn.innerText = theme === 'dark' ? '🌙' : '🌞';
-            initChart();
-        }
-
-        function toggleNav() {
-            document.getElementById('nav-dropdown').classList.toggle('hidden');
-        }
-
-        function scrollToSection(id) {
-            toggleNav();
-            const el = document.getElementById(id);
-            window.scrollTo({ top: el.offsetTop - 64, behavior: 'smooth' });
-            setTimeout(() => startSpeech(id), 600);
-        }
-
-        function resetToHome() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            stopSpeech();
-        }
-        
-        function scrollWithoutNav(id) {
-            const el = document.getElementById(id);
-            window.scrollTo({ top: el.offsetTop - 64, behavior: 'smooth' });
-        }
-
-        function updateUI() {
-            document.getElementById('lang-btn').innerText = lang === 'en' ? '中文' : 'EN';
-            const keys = Object.keys(i18n[lang]);
-            keys.forEach(k => {
-                const id = k.replace(/[A-Z]/g, m => "-" + m.toLowerCase());
-                const el = document.getElementById(id);
-                if (el) el.innerHTML = i18n[lang][k];
-            });
-            ['discussion', 'pitch', 'reading', 'writing'].forEach((t, i) => {
-                document.getElementById(`tab-${t}`).innerText = i18n[lang].tabs[i];
-            });
-        }
-
-        function setRubric(type) {
-            const container = document.getElementById('rubric-grid');
-            ['discussion', 'pitch', 'reading', 'writing'].forEach(t => {
-                const btn = document.getElementById(`tab-${t}`);
-                if (t === type) { btn.classList.add('gold-bg', 'text-white'); }
-                else { btn.classList.remove('gold-bg', 'text-white'); }
-            });
-
-            container.innerHTML = '';
-            const levels = i18n[lang].levels;
-            const content = rubricData[type][lang];
-            
-            content.forEach((text, i) => {
-                const card = document.createElement('div');
-                card.className = "rubric-card flex flex-col";
-                card.innerHTML = `
-                    <p class="text-[10px] gold-text font-bold mb-2 tracking-widest uppercase">Target Level ${4-i}</p>
-                    <h4 class="font-bold mb-4 text-sm">${levels[i]}</h4>
-                    <p class="text-[12px] opacity-75 leading-relaxed text-justify">${text}</p>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function initChart() {
-            if (radarChart) radarChart.destroy();
-            const ctx = document.getElementById('heroRadar').getContext('2d');
-            const isDark = theme === 'dark';
-            const labels = lang === 'en' 
-                ? ['Case Logic', 'Decision Impact', 'Strategy Scaffolding', 'Precision', 'Fluency', 'Data Synthesis'] 
-                : ['個案邏輯', '決策影響力', '策略性鷹架', '精準度', '流暢度', '數據整合'];
-
-            radarChart = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Professional EMI',
-                        data: [98, 95, 92, 75, 80, 90],
-                        backgroundColor: 'rgba(212, 175, 55, 0.2)',
-                        borderColor: '#D4AF37',
-                        borderWidth: 2
-                    }, {
-                        label: 'General Academic',
-                        data: [65, 55, 45, 90, 85, 35],
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                        borderColor: isDark ? '#ffffff' : '#004529',
-                        borderWidth: 1, borderDash: [5, 5]
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            grid: { color: 'rgba(212, 175, 55, 0.1)' },
-                            pointLabels: { color: isDark ? '#ffffff' : '#004529', font: { size: 10 } },
-                            ticks: { display: false }
-                        }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
-        function toggleSpeech() {
-            const btn = document.getElementById('play-pause-btn');
-            if (isSpeaking && !isPaused) {
-                synth.pause();
-                isPaused = true;
-                btn.innerText = "▶";
-            } else if (isSpeaking && isPaused) {
-                synth.resume();
-                isPaused = false;
-                btn.innerText = "Ⅱ";
-            } else {
-                startSpeech();
-            }
-        }
-
-        function startSpeech(sectionId = null) {
-            synth.cancel();
-            const btn = document.getElementById('play-pause-btn');
-            let text = "";
-            if (sectionId) {
-                text = document.getElementById(sectionId).innerText;
-            } else {
-                const content = document.querySelectorAll('h1, h2, h4, p');
-                text = Array.from(content).map(el => el.innerText).join('. ');
-            }
-            
-            utter = new SpeechSynthesisUtterance(text);
-            utter.lang = lang === 'en' ? 'en-GB' : 'zh-TW';
-            utter.rate = 0.95;
-            utter.onstart = () => { isSpeaking = true; isPaused = false; btn.innerText = "Ⅱ"; };
-            utter.onend = () => { isSpeaking = false; btn.innerText = "▶"; };
-            synth.speak(utter);
-        }
-
-        function stopSpeech() {
-            synth.cancel();
-            isSpeaking = false;
-            isPaused = false;
-            document.getElementById('play-pause-btn').innerText = "▶";
-        }
-    </script>
 </body>
 </html>
